@@ -174,8 +174,8 @@ CREATE TABLE FactCashBalances ( SK_CustomerID NUMBER(11,0) Not Null REFERENCES D
 								BatchID NUMBER(5)
 );
 
-CREATE TABLE FactHoldings (	TradeID NUMBER(11,0) Not NULL REFERENCES DimTrade (TradeID),
-							CurrentTradeID NUMBER(11,0) Not Null REFERENCES DimTrade (CurrentTradeID),
+CREATE TABLE FactHoldings (	TradeID NUMBER(11,0) Not Null,
+							CurrentTradeID NUMBER(11,0) Not Null,
 							SK_CustomerID NUMBER(11,0) Not NULL REFERENCES DimCustomer (SK_CustomerID),
 							SK_AccountID NUMBER(11,0) Not NULL REFERENCES DimAccount (SK_AccountID),
 							SK_SecurityID NUMBER(11,0) Not NULL REFERENCES DimSecurity (SK_SecurityID),
@@ -310,4 +310,4 @@ CREATE TABLE Audit_ ( DataSet CHAR(20) Not Null,
 --   th_st_id character(4)
 -- );
 
-
+exit

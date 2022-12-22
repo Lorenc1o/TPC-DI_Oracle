@@ -18,3 +18,4 @@ drop table StatusType cascade constraints PURGE;
 drop table TaxRate cascade constraints PURGE;
 drop table TradeType cascade constraints PURGE;
 drop table Audit_ cascade constraints PURGE;
+exit
