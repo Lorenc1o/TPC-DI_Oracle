@@ -72,100 +72,28 @@ class TPCDI_Loader():
     """
     Create Industry table in the staging database and then load rows in Industry.txt into it.
     """
-
-    # Create ddl to store industry
-    industry_ddl = """
-    USE """+self.db_name+""";
-
-    CREATE TABLE Industry (
-      IN_ID CHAR(2) Not NULL,
-			IN_NAME CHAR(50) Not NULL,
-			IN_SC_ID CHAR(4) Not NULL
-    );
-    """
-
     # Create query to load text data into industry table
-    industry_load_query="LOAD DATA LOCAL INFILE 'staging/"+self.sf+"/Batch1/Industry.txt' INTO TABLE Industry COLUMNS TERMINATED BY '|';"
-    
-    # Construct mysql client bash command to execute ddl and data loading query
-    industry_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+industry_ddl+"\""
-    industry_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+industry_load_query+"\""
-    
-    # Execute the command
-    os.system(industry_ddl_cmd)
-    os.system(industry_load_cmd)
+    cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/Industry.ctl', self.batch_dir + 'Industry.txt')
+    os.system(cmd)
 
   def load_status_type(self):
     """
     Create StatusType table in the staging database and then load rows in StatusType.txt into it.
     """
-
-      
-    # Create ddl to store statusType
-    statusType_ddl = """
-    USE """+self.db_name+""";
-
-    CREATE TABLE StatusType (
-      ST_ID CHAR(4) NOT NULL,
-      ST_NAME CHAR(10) NOT NULL
-    );
-    """
-
     # Create query to load text data into statusType table
     statusType_load_query="LOAD DATA LOCAL INFILE 'staging/"+self.sf+"/Batch1/StatusType.txt' INTO TABLE StatusType COLUMNS TERMINATED BY '|';"
-    
-    # Construct mysql client bash command to execute ddl and data loading query
-    statusType_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+statusType_ddl+"\""
-    statusType_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+statusType_load_query+"\""
-    
-    # Execute the command
-    os.system(statusType_ddl_cmd)
-    os.system(statusType_load_cmd)
 
   def load_tax_rate(self):
     """
     Create TaxRate table in the staging database and then load rows in TaxRate.txt into it.
     """
-
-    # Create ddl to store taxRate
-    taxRate_ddl = """
-    USE """+self.db_name+""";
-
-    CREATE TABLE TaxRate (
-      TX_ID CHAR(4) NOT NULL,
-      TX_NAME CHAR(50) NOT NULL,
-			TX_RATE NUMERIC(6,5) NOT NULL
-    );
-    """
-
     # Create query to load text data into taxRate table
     taxRate_load_query="LOAD DATA LOCAL INFILE 'staging/"+self.sf+"/Batch1/TaxRate.txt' INTO TABLE TaxRate COLUMNS TERMINATED BY '|';"
-    
-    # Construct mysql client bash command to execute ddl and data loading query
-    taxRate_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+taxRate_ddl+"\""
-    taxRate_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+taxRate_load_query+"\""
-    
-    # Execute the command
-    os.system(taxRate_ddl_cmd)
-    os.system(taxRate_load_cmd)
   
   def load_trade_type(self):
     """
     Create TradeType table in the staging database and then load rows in TradeType.txt into it.
     """
-
-    # Create ddl to store tradeType
-    tradeType_ddl = """
-    USE """+self.db_name+""";
-
-    CREATE TABLE TradeType (
-      TT_ID CHAR(3) NOT NULL,
-      TT_NAME CHAR(12) NOT NULL,
-			TT_IS_SELL NUMERIC(1) NOT NULL,
-			TT_IS_MRKT NUMERIC(1) NOT NULL
-    );
-    """
-
     # Create query to load text data into tradeType table
     tradeType_load_query="LOAD DATA LOCAL INFILE 'staging/"+self.sf+"/Batch1/TradeType.txt' INTO TABLE TradeType COLUMNS TERMINATED BY '|';"
     
@@ -429,28 +357,6 @@ class TPCDI_Loader():
     """
     Create DimBroker table in the target database and then load rows in HR.csv into it.
     """
-
-    # Create ddl to store broker
-    dim_broker_ddl = """
-    USE """+self.db_name+""";
-
-    CREATE TABLE DimBroker(
-      SK_BrokerID INTEGER NOT NULL PRIMARY KEY AUTO_INCREMENT,
-      BrokerID INTEGER NOT NULL,
-      ManagerID INTEGER,
-      FirstName CHAR(50) NOT NULL,
-      LastName CHAR(50) NOT NULL,
-      MiddleInitial CHAR(1),
-      Branch CHAR(50),
-      Office CHAR(50),
-      Phone CHAR(14),
-      IsCurrent BOOLEAN NOT NULL,
-      BatchID INTEGER NOT NULL,
-      EffectiveDate DATE NOT NULL,
-      EndDate DATE NOT NULL
-    );
-    """
-
     # Create query to load text data into broker table
     dim_broker_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+dim_broker_ddl+"\""
     # Execute the command
@@ -573,42 +479,6 @@ class TPCDI_Loader():
     """
     Create Prospect table in the target database and then load rows in Prospect.csv into it.
     """
-
-    # Create ddl to store prospect
-    prospect_ddl = """
-    USE """+self.db_name+""";
-
-    CREATE TABLE Prospect (
-      AgencyID CHAR(30) NOT NULL,  
-			SK_RecordDateID INTEGER NOT NULL,
-      SK_UpdateDateID INTEGER NOT NULL,
-			BatchID NUMERIC(5) NOT NULL,
-			IsCustomer BOOLEAN NOT NULL,
-			LastName CHAR(30) NOT NULL,
-			FirstName CHAR(30) NOT NULL,
-			MiddleInitial CHAR(1),
-			Gender CHAR(1),
-			AddressLine1 CHAR(80),
-			AddressLine2 CHAR(80),
-			PostalCode CHAR(12),
-			City CHAR(25) NOT NULL,
-			State CHAR(20) NOT NULL,
-			Country CHAR(24),
-			Phone CHAR(30), 
-			Income NUMERIC(9),
-			NumberCars NUMERIC(2), 
-			NumberChildren NUMERIC(2), 
-			MaritalStatus CHAR(1), 
-			Age NUMERIC(3),
-			CreditRating NUMERIC(4),
-			OwnOrRentFlag CHAR(1), 
-			Employer CHAR(30),
-			NumberCreditCards NUMERIC(2), 
-			NetWorth NUMERIC(12),
-			MarketingNameplate CHAR(100)
-    );
-    """
-
     # Create query to load text data into prospect table
     prospect_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+prospect_ddl+"\""
     # Execute the command
@@ -669,21 +539,6 @@ class TPCDI_Loader():
     """
     Create Audit table in the staging database and then load rows in files with "_audit.csv" ending into it.
     """
-
-    # Create ddl to store audit
-    audit_ddl = """
-    USE """+self.db_name+""";
-
-    CREATE TABLE Audit (
-      DataSet CHAR(20) NOT Null,
-			BatchID NUMERIC(5),
-			AT_Date DATE,
-			AT_Attribute CHAR(50),
-			AT_Value NUMERIC(15),
-			DValue NUMERIC(15,5)
-    );
-    """
-
     audit_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+audit_ddl+"\""
     os.system(audit_ddl_cmd)
 
@@ -863,35 +718,6 @@ class TPCDI_Loader():
     """
     Create Dim Company table in the staging database and then load rows by joining staging_company, staging_industry, and staging StatusType
     """
-
-    # Create ddl to store tradeType
-    dim_company_ddl = """
-    USE """+self.db_name+""";
-
-    CREATE TABLE DimCompany (
-        SK_CompanyID INTEGER NOT NULL PRIMARY KEY AUTO_INCREMENT,
-        CompanyID INTEGER NOT NULL,
-        Status CHAR(10) Not NULL,
-        Name CHAR(60) Not NULL,
-        Industry CHAR(50) Not NULL,
-        SPrating CHAR(4),
-        isLowGrade BOOLEAN,
-        CEO CHAR(100) Not NULL,
-        AddressLine1 CHAR(80),
-        AddressLine2 CHAR(80),
-        PostalCode CHAR(12) Not NULL,
-        City CHAR(25) Not NULL,
-        StateProv CHAR(20) Not NULL,
-        Country CHAR(24),
-        Description CHAR(150) Not NULL,
-        FoundingDate DATE,
-        IsCurrent BOOLEAN Not NULL,
-        BatchID numeric(5) Not NULL,
-        EffectiveDate DATE Not NULL,
-        EndDate DATE Not NULL
-      );
-    """
-
     # Create query to load text data into dim_company table
     dim_company_load_query="""
       INSERT INTO DimCompany (CompanyID,Status,Name,Industry,SPrating,isLowGrade,CEO,AddressLine1,AddressLine2,PostalCode,City,StateProv,Country,Description,FoundingDate,IsCurrent,BatchID,EffectiveDate,EndDate)
@@ -936,29 +762,6 @@ class TPCDI_Loader():
     """
     Create Security table in the staging database and then load rows by ..
     """
-
-    # Create ddl to store tradeType
-    security_ddl = """
-    USE """+self.db_name+""";
-
-    CREATE TABLE DimSecurity( SK_SecurityID INTEGER Not NULL PRIMARY KEY AUTO_INCREMENT,
-      Symbol CHAR(15) Not NULL,
-      Issue CHAR(6) Not NULL,
-      Status CHAR(10) Not NULL,
-      Name CHAR(70) Not NULL,
-      ExchangeID CHAR(6) Not NULL,
-      SK_CompanyID INTEGER Not NULL,
-      SharesOutstanding INTEGER Not NULL,
-      FirstTrade DATE Not NULL,
-      FirstTradeOnExchange DATE Not NULL,
-      Dividend INTEGER Not NULL,
-      IsCurrent BOOLEAN Not NULL,
-      BatchID numeric(5) Not NULL,
-      EffectiveDate DATE Not NULL,
-      EndDate DATE Not NULL
-    );
-    """
-
     # Create query to load text data into security table
     security_load_query="""
     INSERT INTO DimSecurity (Symbol,Issue,Status,Name,ExchangeID,SK_CompanyID,SharesOutstanding,FirstTrade,FirstTradeOnExchange,Dividend,IsCurrent,BatchID,EffectiveDate,EndDate)
@@ -1015,29 +818,6 @@ class TPCDI_Loader():
     """
     Create Financial table in the staging database and then load rows by ..
     """
-
-    # Create ddl to store tradeType
-    financial_ddl = """
-    USE """+self.db_name+""";
-
-    CREATE TABLE Financial (
-      SK_CompanyID INTEGER Not NULL,
-      FI_YEAR numeric(4) Not NULL,
-      FI_QTR numeric(1) Not NULL,
-      FI_QTR_START_DATE DATE Not NULL,
-      FI_REVENUE numeric(15,2) Not NULL,
-      FI_NET_EARN numeric(15,2) Not NULL,
-      FI_BASIC_EPS numeric(10,2) Not NULL,
-      FI_DILUT_EPS numeric(10,2) Not NULL,
-      FI_MARGIN numeric(10,2) Not NULL,
-      FI_INVENTORY numeric(15,2) Not NULL,
-      FI_ASSETS numeric(15,2) Not NULL,
-      FI_LIABILITY numeric(15,2) Not NULL,
-      FI_OUT_BASIC numeric(12) Not NULL,
-      FI_OUT_DILUT numeric(12) Not NULL
-      );
-    """
-
     # Create query to load text data into financial table
     financial_load_query="""
     INSERT INTO Financial
