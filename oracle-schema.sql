@@ -1,5 +1,9 @@
 --CREATE TYPE taxStatus AS Enumeric ('0', '1', '2');
 
+CREATE TABLE BatchDate( BatchNumber NUMBER(3,0), 
+						BatchDate DATE NOT NULL
+);
+
 CREATE TABLE DimBroker  ( SK_BrokerID  NUMBER(11,0) PRIMARY KEY,
 							BrokerID  NUMBER(11,0) NOT NULL,
 							ManagerID  NUMBER(11,0),
@@ -103,7 +107,7 @@ CREATE TABLE DimDate (  SK_DateID NUMBER(11,0) PRIMARY KEY,
 						FiscalYearDesc CHAR(20) Not NULL,
 						FiscalQtrID NUMBER(5) Not NULL,
 						FiscalQtrDesc CHAR(20) Not NULL,
-						HolidayFlag NUMBER(1,0) NOT NULL CHECK (HolidayFlag = 0 OR HolidayFlag = 1)
+						HolidayFlag CHAR(6) NOT NULL
 );
 
 CREATE TABLE DimSecurity( SK_SecurityID NUMBER(11,0) PRIMARY KEY,
@@ -131,8 +135,8 @@ CREATE TABLE DimTime ( SK_TimeID NUMBER(11,0) PRIMARY KEY,
 						MinuteDesc CHAR(20) Not NULL,
 						SecondID NUMBER(2) Not NULL,
 						SecondDesc CHAR(20) Not NULL,
-						MarketHoursFlag NUMBER(1,0) NOT NULL CHECK (MarketHoursFlag = 0 OR MarketHoursFlag = 1),
-						OfficeHoursFlag NUMBER(1,0) NOT NULL CHECK (OfficeHoursFlag = 0 OR OfficeHoursFlag = 1)
+						MarketHoursFlag CHAR(5) NOT NULL check (MarketHoursFlag = 'false' or MarketHoursFlag = 'true'),
+						OfficeHoursFlag CHAR(5) NOT NULL check (OfficeHoursFlag = 'false' or OfficeHoursFlag = 'true')
 );
 
 CREATE TABLE DimTrade (	TradeID NUMBER(11,0) Not NULL,

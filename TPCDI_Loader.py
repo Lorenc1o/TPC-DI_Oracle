@@ -7,7 +7,7 @@ from utils import prepare_char_insertion, prepare_numeric_insertion
 class TPCDI_Loader():
   BASE_SQL_CMD = ""
 
-  def __init__(self, sf, db_name, config, batch_number, drop_sql, create_sql, overwrite=False):
+  def __init__(self, sf, config, batch_number, drop_sql, create_sql, load_path, overwrite=False):
     """
     Initialize staging database.
 
@@ -18,149 +18,56 @@ class TPCDI_Loader():
         batch_number (int): Batch number that going to be processed
         drop_sql (str): Path to the sql file for dropping all the tables
         create_sql (str): Path to the sql file for creating all the tables
+        load_path (str): Path to the directory load, where all sql files are located
     """
 
     self.sf = sf
-    self.db_name = db_name
     self.batch_number = batch_number
     self.batch_dir = "../staging/"+self.sf+"/Batch"+str(self.batch_number)+"/"
+    self.load_path = load_path
 
     # Construct base oraclesql command (set host, port, and user)
-    TPCDI_Loader.BASE_SQL_CMD = 'sqlplus %s/%s@%s' % (
+    TPCDI_Loader.BASE_SQL_CMD = 'sqlplus %s/%s@%s/%s' % (
         config['ORACLESQL_SERVER']['oracle_user'], config['ORACLESQL_SERVER']['oracle_pwd'], 
-        config['ORACLESQL_SERVER']['oracle_host'])
-    TPCDI_Loader.BASE_SQL_CMD_DB = TPCDI_Loader.BASE_SQL_CMD+'/%s' % (db_name)
+        config['ORACLESQL_SERVER']['oracle_host'], config['ORACLESQL_SERVER']['oracle_db'])
+    TPCDI_Loader.BASE_SQLLDR_CMD = 'sqlldr userid=%s/%s@%s/%s' % (
+      config['ORACLESQL_SERVER']['oracle_user'], config['ORACLESQL_SERVER']['oracle_pwd'],
+      config['ORACLESQL_SERVER']['oracle_host'], config['ORACLESQL_SERVER']['oracle_db']
+    )
 
     # Drop database if it is exists and overwrite param is set to True
     if overwrite:
       # dropping the tables
-      drop_tables_cmd = TPCDI_Loader.BASE_SQL_CMD_DB+' @%s' % (drop_sql)
-      os.system(drop_tables_cmd)
-
-      # # dropping the database
-      # drop_db_query = "DROP DATABASE IF EXISTS "+self.db_name
-      # drop_db_cmd = TPCDI_Loader.BASE_SQL_CMD+" -e '"+drop_db_query+"'"
-      # os.system(drop_db_cmd)
-    
-    # db_creation_ddl = "CREATE DATABASE "+self.db_name
-    
-    # # Construct MySQL client bash command and then execute it
-    # db_creation_cmd = TPCDI_Loader.BASE_SQL_CMD+" -e '"+db_creation_ddl+"'"
-    # os.system(db_creation_cmd)
+      cmd = TPCDI_Loader.BASE_SQL_CMD+' @%s' % (drop_sql)
+      os.system(cmd)
 
     # Create the tables
-    create_tables_cmd = TPCDI_Loader.BASE_SQL_CMD_DB+' @%s' % (create_sql)
-    os.system(create_tables_cmd)
-
-    # # Insert create batch date table
-    # batch_date_ddl = "CREATE TABLE batch_date(batch_number NUMERIC(3), batch_date DATE);"
-    # batch_date_creation_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+batch_date_ddl+"\""
-    # os.system(batch_date_creation_cmd)
+    cmd = TPCDI_Loader.BASE_SQL_CMD+' @%s' % (create_sql)
+    os.system(cmd)
 
   def load_current_batch_date(self):
     with open(self.batch_dir+"BatchDate.txt", "r") as batch_date_file:
-      batch_date_loading_query = "INSERT INTO batch_date VALUES (%i, STR_TO_DATE('%s','%s'));"%(self.batch_number,batch_date_file.read().strip(),"%Y-%m-%d")
-      batch_date_loading_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+batch_date_loading_query+"\""      
-      os.system(batch_date_loading_cmd)
+      cmd = TPCDI_Loader.BASE_SQL_CMD+' @%s' % (self.load_path+'/BatchDate.sql')
+      cmd += ' %s %s' % (self.batch_number,batch_date_file.read().strip())
+      os.system(cmd)
   
   def load_dim_date(self):
     """
     Create DimDate table in the staging database and then load rows in Date.txt into it.
     """
 
-    # Create ddl to store dimDate
-    dimDate_ddl = """
-    USE """+self.db_name+""";
-
-    CREATE TABLE DimDate (
-      SK_DateID INTEGER NOT NULL PRIMARY KEY,
-			DateValue DATE NOT NULL,
-			DateDesc CHAR(20) NOT NULL,
-			CalendarYearID NUMERIC(4) NOT NULL,
-			CalendarYearDesc CHAR(20) NOT NULL,
-			CalendarQtrID NUMERIC(5) NOT NULL,
-			CalendarQtrDesc CHAR(20) NOT NULL,
-			CalendarMonthID NUMERIC(6) NOT NULL,
-			CalendarMonthDesc CHAR(20) NOT NULL,
-			CalendarWeekID NUMERIC(6) NOT NULL,
-			CalendarWeekDesc CHAR(20) NOT NULL,
-			DayOfWeeknumeric NUMERIC(1) NOT NULL,
-			DayOfWeekDesc CHAR(10) NOT NULL,
-			FiscalYearID NUMERIC(4) NOT NULL,
-			FiscalYearDesc CHAR(20) NOT NULL,
-			FiscalQtrID NUMERIC(5) NOT NULL,
-			FiscalQtrDesc CHAR(20) NOT NULL,
-			HolidayFlag BOOLEAN
-    );
-    """
-
     # Create query to load text data into dimDate table
-    dimDate_load_query="LOAD DATA LOCAL INFILE 'staging/"+self.sf+"/Batch1/Date.txt' INTO TABLE DimDate COLUMNS TERMINATED BY '|';"
-    
-    # Construct mysql client bash command to execute ddl and data loading query
-    dimDate_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+dimDate_ddl+"\""
-    dimDate_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+dimDate_load_query+"\""
-    
-    # Execute the command
-    os.system(dimDate_ddl_cmd)
-    os.system(dimDate_load_cmd)
-
-  def init_di_messages(self):
-    """
-    Create DImessages table in the target database.
-    """
-
-    # Create ddl to store dimTime
-    diMessages_ddl = """
-    USE """+self.db_name+""";
-
-    CREATE TABLE DImessages (
-      MessageDateAndTime TIMESTAMP NOT NULL,
-			BatchID NUMERIC(5) NOT NULL,
-			MessageSource CHAR(30),
-			MessageText CHAR(50) NOT NULL,
-			MessageType CHAR(12) NOT NULL,
-			MessageData CHAR(100)
-    );
-    """
-
-    diMessages_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+diMessages_ddl+"\""
-    os.system(diMessages_ddl_cmd)
+    cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/DimDate.ctl', self.batch_dir + 'Date.txt')
+    os.system(cmd)
 
   def load_dim_time(self):
     """
     Create DimTime table in the staging database and then load rows in Time.txt into it.
     """
-
-    # Create ddl to store dimTime
-    dimTime_ddl = """
-    USE """+self.db_name+""";
-
-    CREATE TABLE DimTime (
-      SK_TimeID INTEGER Not NULL PRIMARY KEY,
-			TimeValue TIME Not NULL,
-			HourID numeric(2) Not NULL,
-			HourDesc CHAR(20) Not NULL,
-			MinuteID numeric(2) Not NULL,
-			MinuteDesc CHAR(20) Not NULL,
-			SecondID numeric(2) Not NULL,
-			SecondDesc CHAR(20) Not NULL,
-			MarketHoursFlag BOOLEAN,
-			OfficeHoursFlag BOOLEAN
-    );
-    """
-
     # Create query to load text data into dimTime table
-    dimTime_load_query="LOAD DATA LOCAL INFILE 'staging/"+self.sf+"/Batch1/Time.txt' INTO TABLE DimTime COLUMNS TERMINATED BY '|';"
+    cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/DimTime.ctl', self.batch_dir + 'Time.txt')
+    os.system(cmd)
     
-    # Construct mysql client bash command to execute ddl and data loading query
-    dimTime_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+dimTime_ddl+"\""
-    dimTime_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+dimTime_load_query+"\""
-    
-    # Execute the command
-    os.system(dimTime_ddl_cmd)
-    os.system(dimTime_load_cmd)
-
   def load_industry(self):
     """
     Create Industry table in the staging database and then load rows in Industry.txt into it.

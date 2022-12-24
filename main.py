@@ -10,11 +10,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-s", "--scalefactor", help="Scale factor used", required=True)
     parser.add_argument(
-        "-d", "--dbname", help="Name of database schema to which the data will be loaded", required=True)
-    parser.add_argument(
         "-a", "--drop_sql", help="Path to the sql file for dropping all the tables", required=True)
     parser.add_argument(
         "-c", "--create_sql", help="Path to the sql file for creating all the tables", required=True)
+    parser.add_argument(
+        "-l", "--load_path", help="Path to the sql file for loading all the tables", required=True)
 
     args = parser.parse_args()
 
@@ -33,21 +33,20 @@ if __name__ == "__main__":
         # For the historical load, all data are loaded
         if batch_number == 1:
             loader = TPCDI_Loader(
-                args.scalefactor, args.dbname, config, batch_number, args.drop_sql, 
-                args.create_sql, overwrite=True)
+                args.scalefactor, config, batch_number, args.drop_sql, 
+                args.create_sql, args.load_path, overwrite=True)
 
-            # # Step 1: Load the batchDate table for this batch
-            # loader.load_current_batch_date()
+            # Step 1: Load the batchDate table for this batch
+            loader.load_current_batch_date()
         
             # # Step 2: Load non-dependence tables
             # loader.load_dim_date()
-            # loader.load_dim_time()
+            loader.load_dim_time()
             # loader.load_industry()
             # loader.load_status_type()
             # loader.load_tax_rate()
             # loader.load_trade_type()
             # loader.load_audit()
-            # loader.init_di_messages()
             
             # # # Step 3: Load staging tables
             # loader.load_staging_finwire()
