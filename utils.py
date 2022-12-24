@@ -5,19 +5,31 @@ import string
 import random
 from contextlib import ExitStack 
 from heapq import merge
+from abc import ABC, abstractmethod
 
-
-class CSV_Transformer():
+class Transformer(ABC):
     """
-    TODO: Make an abstract class, and this should extend the abstract class
+    Abstract class for transforming a row in a flat file to a list
+    """
+    @abstractmethod
+    def transform(self, line):
+        pass
+    @abstractmethod
+    def inverse_transform(self, transformed):
+        pass
+    
+
+
+class CSV_Transformer(Transformer):
+    """
     Transform a row in a csv flat file to a list
     Attributes:
         delimiter (str): Character used to limit a field entries to other fields.
     """
-    def __init__(self, delimiter):
+    def __init__(self, delimiter=','):
         self.delimiter = delimiter
-    def transofrm(self, line):
-        return line.split(self.delimiter)
+    def transform(self, line):
+        return line.rstrip('\n').split(self.delimiter)
     def inverse_transform(self, transformed):
         return self.delimiter.join(transformed)
 
