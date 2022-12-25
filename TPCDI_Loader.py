@@ -32,23 +32,27 @@ class TPCDI_Loader():
     self.oracle_db = config['ORACLESQL_SERVER']['oracle_db']
 
     # Construct base oraclesql command (set host, port, and user)
+    TPCDI_Loader.BASE_SQL_CMD = 'sqlplus %s/%s@%s/%s' % (
+        self.oracle_user, self.oracle_pwd, self.oracle_host, self.oracle_db)
     TPCDI_Loader.BASE_SQLLDR_CMD = 'sqlldr userid=%s/%s@%s/%s' % (
       self.oracle_user, self.oracle_pwd, self.oracle_host, self.oracle_db
     )
-
+    print(TPCDI_Loader.BASE_SQLLDR_CMD)
     # Drop database if it is exists and overwrite param is set to True
     if overwrite:
+      print('YYYYYYYYYYYYes 0')
       # dropping the tables
-      cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' @%s' % (drop_sql)
+      cmd = TPCDI_Loader.BASE_SQL_CMD+' @%s' % (drop_sql)
       os.system(cmd)
 
       # Create the tables
-      cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' @%s' % (create_sql)
+      cmd = TPCDI_Loader.BASE_SQL_CMD+' @%s' % (create_sql)
       os.system(cmd)
+    
 
   def load_current_batch_date(self):
     with open(self.batch_dir+"BatchDate.txt", "r") as batch_date_file:
-      cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' @%s' % (self.load_path+'/BatchDate.sql')
+      cmd = TPCDI_Loader.BASE_SQL_CMD+' @%s' % (self.load_path+'/BatchDate.sql')
       cmd += ' %s %s' % (self.batch_number,batch_date_file.read().strip())
       os.system(cmd)
   
@@ -151,7 +155,7 @@ class TPCDI_Loader():
     """
     
     # Construct mysql client bash command to execute ddl and data loading query
-    customer_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+customer_ddl+"\""
+    # customer_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+customer_ddl+"\""
     
     # Execute the command
     os.system(customer_ddl_cmd)
@@ -310,7 +314,7 @@ class TPCDI_Loader():
           s_customer_load_query=s_customer_base_query+','.join(s_customer_values)
           s_customer_values = []
           # Construct mysql client bash command to execute ddl and data loading query
-          s_customer_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+s_customer_load_query+"\""
+          # s_customer_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+s_customer_load_query+"\""
       
           # Execute the command
           os.system(s_customer_load_cmd)
@@ -342,8 +346,8 @@ class TPCDI_Loader():
     broker_load_query="LOAD DATA LOCAL INFILE 'staging/"+self.sf+"/Batch1/HR.csv' INTO TABLE S_Broker COLUMNS TERMINATED BY ',';"
     
     # Construct mysql client bash command to execute ddl and data loading query
-    broker_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+broker_ddl+"\""
-    broker_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+broker_load_query+"\""
+    # broker_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+broker_ddl+"\""
+    # broker_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+broker_load_query+"\""
     
     # Execute the command
     os.system(broker_ddl_cmd)
@@ -354,7 +358,7 @@ class TPCDI_Loader():
     Create DimBroker table in the target database and then load rows in HR.csv into it.
     """
     # Create query to load text data into broker table
-    dim_broker_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+dim_broker_ddl+"\""
+    # dim_broker_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+dim_broker_ddl+"\""
     # Execute the command
     os.system(dim_broker_ddl_cmd)
     
@@ -364,7 +368,7 @@ class TPCDI_Loader():
       FROM S_Broker SB
       WHERE SB.EmployeeJobCode = 314;
     """
-    load_dim_broker_cmd = dim_broker_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+load_dim_broker_query+"\""
+    # load_dim_broker_cmd = dim_broker_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+load_dim_broker_query+"\""
     os.system(load_dim_broker_cmd)
 
 
@@ -389,8 +393,8 @@ class TPCDI_Loader():
     cash_balances_load_query="LOAD DATA LOCAL INFILE 'staging/"+self.sf+"/Batch1/CashTransaction.txt' INTO TABLE S_Cash_Balances COLUMNS TERMINATED BY '|';"
     
     # Construct mysql client bash command to execute ddl and data loading query
-    cash_balances_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+cash_balances_ddl+"\""
-    cash_balances_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+cash_balances_load_query+"\""
+    # cash_balances_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+cash_balances_ddl+"\""
+    # cash_balances_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+cash_balances_load_query+"\""
     
     # Execute the command
     os.system(cash_balances_ddl_cmd)
@@ -418,8 +422,8 @@ class TPCDI_Loader():
     watches_load_query="LOAD DATA LOCAL INFILE 'staging/"+self.sf+"/Batch1/WatchHistory.txt' INTO TABLE S_Watches COLUMNS TERMINATED BY '|';"
     
     # Construct mysql client bash command to execute ddl and data loading query
-    watches_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+watches_ddl+"\""
-    watches_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+watches_load_query+"\""
+    # watches_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+watches_ddl+"\""
+    # watches_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+watches_load_query+"\""
     
     # Execute the command
     os.system(watches_ddl_cmd)
@@ -464,8 +468,8 @@ class TPCDI_Loader():
     prospect_load_query="LOAD DATA LOCAL INFILE 'staging/"+self.sf+"/Batch1/Prospect.csv' INTO TABLE S_Prospect COLUMNS TERMINATED BY ',';"
     
     # Construct mysql client bash command to execute ddl and data loading query
-    prospect_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+prospect_ddl+"\""
-    prospect_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+prospect_load_query+"\""
+    # prospect_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+prospect_ddl+"\""
+    # prospect_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+prospect_load_query+"\""
     
     # Execute the command
     os.system(prospect_ddl_cmd)
@@ -476,7 +480,7 @@ class TPCDI_Loader():
     Create Prospect table in the target database and then load rows in Prospect.csv into it.
     """
     # Create query to load text data into prospect table
-    prospect_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+prospect_ddl+"\""
+    # prospect_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+prospect_ddl+"\""
     # Execute the command
     os.system(prospect_ddl_cmd)
 
@@ -512,7 +516,7 @@ class TPCDI_Loader():
       END //
     DELIMITER ;
     """
-    marketing_nameplate_function_definition_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+marketing_nameplate_function_definition_ddl+"\""
+    # marketing_nameplate_function_definition_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+marketing_nameplate_function_definition_ddl+"\""
     os.system(marketing_nameplate_function_definition_cmd)
     
     load_prospect_query = """
@@ -528,7 +532,7 @@ class TPCDI_Loader():
     INSERT INTO DImessages
 	    SELECT current_timestamp(),%s,'Prospect', 'Inserted rows', 'Status', (SELECT COUNT(*) FROM Prospect);
     """%(str(self.batch_number),str(self.batch_number),str(self.batch_number),str(self.batch_number))
-    load_prospect_cmd = prospect_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+load_prospect_query+"\""
+    # load_prospect_cmd = prospect_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+load_prospect_query+"\""
     os.system(load_prospect_cmd)
   
   def load_audit(self):
@@ -544,15 +548,17 @@ class TPCDI_Loader():
     Create S_Company and S_Security table in the staging database and then load rows in FINWIRE files with the type of CMP
     """
     base_path = "../staging/"+self.sf+"/Batch1/"
-    s_company_base_query = "INSERT INTO S_Company VALUES "
-    s_security_base_query = "INSERT INTO S_Security VALUES "
-    s_financial_base_query = "INSERT INTO S_Financial VALUES"
+    s_company_base_query = "INSERT INTO S_Company"
+    s_security_base_query = "INSERT INTO S_Security"
+    s_financial_base_query = "INSERT INTO S_Financial"
     s_company_values = []
     s_security_values = []
     s_financial_values = []
     max_packet = 150
-    for fname in os.listdir(base_path)[0:1]:
+    for fname in os.listdir(base_path):
+      print('fname', fname)
       if("FINWIRE" in fname and "audit" not in fname):
+        print('YYYYYYYYYYYYes 1')
         with open(base_path+fname, 'r') as finwire_file:
           for line in finwire_file:
             pts = line[:15] #0
@@ -582,6 +588,7 @@ class TPCDI_Loader():
                 s_company_values = []
 
                 # Construct mysql client bash command to execute ddl and data loading query
+                print("yes 1")
                 with oracledb.connect(
                   user=self.oracle_user, password=self.oracle_pwd, 
                   dsn=self.oracle_host+'/'+self.oracle_db) as connection:
@@ -607,6 +614,7 @@ class TPCDI_Loader():
                 s_security_load_query=s_security_base_query+','.join(s_security_values)
                 s_security_values = []
                 # Construct mysql client bash command to execute ddl and data loading query
+                print('yes 2')
                 with oracledb.connect(
                   user=self.oracle_user, password=self.oracle_pwd, 
                   dsn=self.oracle_host+'/'+self.oracle_db) as connection:
@@ -630,18 +638,25 @@ class TPCDI_Loader():
               diluted_sh_out = line[173:186]
               co_name_or_cik = line[186:]
 
-              s_financial_values.append("('%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s')"%(pts, rec_type, year,quarter,qtr_start_date,posting_date, revenue, earnings, eps, diluted_eps, margin, inventory, assets, liabilities, sh_out,diluted_sh_out,co_name_or_cik))
+              s_financial_values.append(
+                "%s (PTS, REC_TYPE, YEAR,QUARTER,QTR_START_DATE,POSTING_DATE,REVENUE,EARNINGS,EPS,DILUTED_EPS,"
+                "MARGIN,INVENTORY,ASSETS,LIABILITIES,SH_OUT,DILUTED_SH_OUT,CO_NAME_OR_CIK) VALUES ('%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s')"
+                %(s_financial_base_query,
+                  pts, rec_type, year,quarter,qtr_start_date,posting_date, revenue, earnings, eps, diluted_eps, 
+                  margin, inventory, assets, liabilities, sh_out,diluted_sh_out,co_name_or_cik
+                  ))
 
               if len(s_financial_values)>=max_packet:
+                print('yes 3')
                 # Create query to load text data into tradeType table
-                s_financial_load_query=s_financial_base_query+','.join(s_financial_values)
-                s_financial_values = []
-                # Construct mysql client bash command to execute ddl and data loading query
                 with oracledb.connect(
                   user=self.oracle_user, password=self.oracle_pwd, 
                   dsn=self.oracle_host+'/'+self.oracle_db) as connection:
                   with connection.cursor() as cursor:
-                      cursor.execute(s_financial_load_query)
+                    for query in s_financial_values[0:1]:
+                      print('query',query)
+                      cursor.execute(query)
+                s_financial_values = []
 
   def load_target_dim_company(self):
     """
@@ -678,9 +693,9 @@ class TPCDI_Loader():
     """
 
     # Construct mysql client bash command to execute ddl and data loading query
-    dim_company_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+dim_company_ddl+"\""
-    dim_company_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+dim_company_load_query+"\""
-    dim_company_sdc_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+dim_company_sdc_query+"\""
+    # dim_company_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+dim_company_ddl+"\""
+    # dim_company_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+dim_company_load_query+"\""
+    # dim_company_sdc_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+dim_company_sdc_query+"\""
 
     # Execute the command
     os.system(dim_company_ddl_cmd)
@@ -734,9 +749,9 @@ class TPCDI_Loader():
     """
     
     # Construct mysql client bash command to execute ddl and data loading query
-    dim_security_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+security_ddl+"\""
-    dim_security_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+security_load_query+"\""
-    dim_security_scd_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+dim_security_scd+"\""
+    # dim_security_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+security_ddl+"\""
+    # dim_security_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+security_load_query+"\""
+    # dim_security_scd_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+dim_security_scd+"\""
 
     # Execute the command
     os.system(dim_security_ddl_cmd)
@@ -766,8 +781,8 @@ class TPCDI_Loader():
     """
     
     # Construct mysql client bash command to execute ddl and data loading query
-    dim_financial_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+financial_ddl+"\""
-    dim_financial_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+financial_load_query+"\""
+    # dim_financial_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+financial_ddl+"\""
+    # dim_financial_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+financial_load_query+"\""
     
     # Execute the command
     os.system(dim_financial_ddl_cmd)
@@ -794,8 +809,8 @@ class TPCDI_Loader():
     tade_history_load_query="LOAD DATA LOCAL INFILE '"+self.batch_dir+"TradeHistory.txt' INTO TABLE s_trade_history COLUMNS TERMINATED BY '|';"
     
     # Construct mysql client bash command to execute ddl and data loading query
-    tade_history_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+tade_history_ddl+"\""
-    tade_history_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+tade_history_load_query+"\""
+    # tade_history_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+tade_history_ddl+"\""
+    # tade_history_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+tade_history_load_query+"\""
     
     # Execute the command
     os.system(tade_history_ddl_cmd)
@@ -842,8 +857,8 @@ class TPCDI_Loader():
       
 
     # Construct mysql client bash command to execute ddl and data loading query
-    tade_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+tade_ddl+"\""
-    tade_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+tade_load_query+"\""
+    # tade_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+tade_ddl+"\""
+    # tade_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+tade_load_query+"\""
     
     # Execute the command
     os.system(tade_ddl_cmd)
