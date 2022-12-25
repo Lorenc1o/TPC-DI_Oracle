@@ -40,12 +40,12 @@ if __name__ == "__main__":
             loader.load_current_batch_date()
         
             # # Step 2: Load non-dependence tables
-            # loader.load_dim_date()
+            loader.load_dim_date()
             loader.load_dim_time()
-            # loader.load_industry()
-            # loader.load_status_type()
-            # loader.load_tax_rate()
-            # loader.load_trade_type()
+            loader.load_industry()
+            loader.load_status_type()
+            loader.load_tax_rate()
+            loader.load_trade_type()
             # loader.load_audit()
             
             # # # Step 3: Load staging tables

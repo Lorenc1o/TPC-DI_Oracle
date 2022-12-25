@@ -41,9 +41,9 @@ class TPCDI_Loader():
       cmd = TPCDI_Loader.BASE_SQL_CMD+' @%s' % (drop_sql)
       os.system(cmd)
 
-    # Create the tables
-    cmd = TPCDI_Loader.BASE_SQL_CMD+' @%s' % (create_sql)
-    os.system(cmd)
+      # Create the tables
+      cmd = TPCDI_Loader.BASE_SQL_CMD+' @%s' % (create_sql)
+      os.system(cmd)
 
   def load_current_batch_date(self):
     with open(self.batch_dir+"BatchDate.txt", "r") as batch_date_file:
@@ -81,29 +81,24 @@ class TPCDI_Loader():
     Create StatusType table in the staging database and then load rows in StatusType.txt into it.
     """
     # Create query to load text data into statusType table
-    statusType_load_query="LOAD DATA LOCAL INFILE 'staging/"+self.sf+"/Batch1/StatusType.txt' INTO TABLE StatusType COLUMNS TERMINATED BY '|';"
+    cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/StatusType.ctl', self.batch_dir + 'StatusType.txt')
+    os.system(cmd)
 
   def load_tax_rate(self):
     """
     Create TaxRate table in the staging database and then load rows in TaxRate.txt into it.
     """
     # Create query to load text data into taxRate table
-    taxRate_load_query="LOAD DATA LOCAL INFILE 'staging/"+self.sf+"/Batch1/TaxRate.txt' INTO TABLE TaxRate COLUMNS TERMINATED BY '|';"
-  
+    cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/TaxRate.ctl', self.batch_dir + 'TaxRate.txt')
+    os.system(cmd)
+    
   def load_trade_type(self):
     """
     Create TradeType table in the staging database and then load rows in TradeType.txt into it.
     """
     # Create query to load text data into tradeType table
-    tradeType_load_query="LOAD DATA LOCAL INFILE 'staging/"+self.sf+"/Batch1/TradeType.txt' INTO TABLE TradeType COLUMNS TERMINATED BY '|';"
-    
-    # Construct mysql client bash command to execute ddl and data loading query
-    tradeType_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+tradeType_ddl+"\""
-    tradeType_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+tradeType_load_query+"\""
-    
-    # Execute the command
-    os.system(tradeType_ddl_cmd)
-    os.system(tradeType_load_cmd)
+    cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/TradeType.ctl', self.batch_dir + 'TradeType.txt')
+    os.system(cmd)
 
   def load_staging_customer(self):
     """
@@ -617,8 +612,6 @@ class TPCDI_Loader():
 
     finwire_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+finwire_ddl+"\""
     os.system(finwire_ddl_cmd)
-
-
     
     base_path = "../staging/"+self.sf+"/Batch1/"
     s_company_base_query = "INSERT INTO S_Company VALUES "
