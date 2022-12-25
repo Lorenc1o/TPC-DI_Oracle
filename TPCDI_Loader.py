@@ -1,6 +1,7 @@
 import os
 import glob
 import xmltodict
+import oracledb
 
 from utils import prepare_char_insertion, prepare_numeric_insertion
 
@@ -25,29 +26,29 @@ class TPCDI_Loader():
     self.batch_number = batch_number
     self.batch_dir = "../staging/"+self.sf+"/Batch"+str(self.batch_number)+"/"
     self.load_path = load_path
+    self.oracle_user = config['ORACLESQL_SERVER']['oracle_user']
+    self.oracle_pwd = config['ORACLESQL_SERVER']['oracle_pwd']
+    self.oracle_host = config['ORACLESQL_SERVER']['oracle_host']
+    self.oracle_db = config['ORACLESQL_SERVER']['oracle_db']
 
     # Construct base oraclesql command (set host, port, and user)
-    TPCDI_Loader.BASE_SQL_CMD = 'sqlplus %s/%s@%s/%s' % (
-        config['ORACLESQL_SERVER']['oracle_user'], config['ORACLESQL_SERVER']['oracle_pwd'], 
-        config['ORACLESQL_SERVER']['oracle_host'], config['ORACLESQL_SERVER']['oracle_db'])
     TPCDI_Loader.BASE_SQLLDR_CMD = 'sqlldr userid=%s/%s@%s/%s' % (
-      config['ORACLESQL_SERVER']['oracle_user'], config['ORACLESQL_SERVER']['oracle_pwd'],
-      config['ORACLESQL_SERVER']['oracle_host'], config['ORACLESQL_SERVER']['oracle_db']
+      self.oracle_user, self.oracle_pwd, self.oracle_host, self.oracle_db
     )
 
     # Drop database if it is exists and overwrite param is set to True
     if overwrite:
       # dropping the tables
-      cmd = TPCDI_Loader.BASE_SQL_CMD+' @%s' % (drop_sql)
+      cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' @%s' % (drop_sql)
       os.system(cmd)
 
       # Create the tables
-      cmd = TPCDI_Loader.BASE_SQL_CMD+' @%s' % (create_sql)
+      cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' @%s' % (create_sql)
       os.system(cmd)
 
   def load_current_batch_date(self):
     with open(self.batch_dir+"BatchDate.txt", "r") as batch_date_file:
-      cmd = TPCDI_Loader.BASE_SQL_CMD+' @%s' % (self.load_path+'/BatchDate.sql')
+      cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' @%s' % (self.load_path+'/BatchDate.sql')
       cmd += ' %s %s' % (self.batch_number,batch_date_file.read().strip())
       os.system(cmd)
   
@@ -534,85 +535,14 @@ class TPCDI_Loader():
     """
     Create Audit table in the staging database and then load rows in files with "_audit.csv" ending into it.
     """
-    audit_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+audit_ddl+"\""
-    os.system(audit_ddl_cmd)
-
-    for filepath in glob.iglob("staging/"+self.sf+"/Batch1/*_audit.csv"):# Create query to load text data into tradeType table
-      audit_load_query="LOAD DATA LOCAL INFILE '"+filepath+"' INTO TABLE Audit COLUMNS TERMINATED BY ',' IGNORE 1 LINES;"
-      
-      # Construct mysql client bash command to execute ddl and data loading query
-      audit_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+audit_load_query+"\""
-      
-      # Execute the command
-      os.system(audit_load_cmd)
+    for filepath in glob.iglob(self.batch_dir+"*_audit.csv"):# Create query to load text data into tradeType table
+      cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/Audit.ctl', filepath)
+      os.system(cmd)
 
   def load_staging_finwire(self):
     """
     Create S_Company and S_Security table in the staging database and then load rows in FINWIRE files with the type of CMP
     """
-
-    # Create ddl to store finwire
-    finwire_ddl = """
-    USE """+self.db_name+""";
-
-    CREATE TABLE S_Company (
-      PTS CHAR(15) NOT NULL,
-      REC_TYPE CHAR(3) NOT NULL,
-			COMPANY_NAME CHAR(60) NOT NULL,
-			CIK CHAR(10) NOT NULL,
-      STATUS CHAR(4) NOT NULL,
-      INDUSTRY_ID CHAR(2) NOT NULL,
-			SP_RATING CHAR(4) NOT NULL,
-			FOUNDING_DATE CHAR(8) NOT NULL,
-      ADDR_LINE_1 CHAR(80) NOT NULL,
-      ADDR_LINE_2 CHAR(80) NOT NULL,
-			POSTAL_CODE CHAR(12) NOT NULL,
-			CITY CHAR(25) NOT NULL,
-      STATE_PROVINCE CHAR(20) NOT NULL,
-      COUNTRY CHAR(24) NOT NULL,
-			CEO_NAME CHAR(46) NOT NULL,
-			DESCRIPTION CHAR(150) NOT NULL
-    );
-
-    CREATE TABLE S_Security (
-      PTS CHAR(15) NOT NULL,
-      REC_TYPE CHAR(3) NOT NULL,
-			SYMBOL CHAR(15) NOT NULL,
-			ISSUE_TYPE CHAR(6) NOT NULL,
-      STATUS CHAR(4) NOT NULL,
-      NAME CHAR(70) NOT NULL,
-			EX_ID CHAR(6) NOT NULL,
-			SH_OUT CHAR(13) NOT NULL,
-      FIRST_TRADE_DATE CHAR(8) NOT NULL,
-      FIRST_TRADE_EXCHANGE CHAR(8) NOT NULL,
-			DIVIDEN CHAR(12) NOT NULL,
-			COMPANY_NAME_OR_CIK CHAR(60) NOT NULL
-    );
-
-    CREATE TABLE S_Financial(
-      PTS CHAR(15),
-      REC_TYPE CHAR(3),
-      YEAR CHAR(4),
-      QUARTER CHAR(1),
-      QTR_START_DATE CHAR(8),
-      POSTING_DATE CHAR(8),
-      REVENUE CHAR(17),
-      EARNINGS CHAR(17),
-      EPS CHAR(12),
-      DILUTED_EPS CHAR(12),
-      MARGIN CHAR(12),
-      INVENTORY CHAR(17),
-      ASSETS CHAR(17),
-      LIABILITIES CHAR(17),
-      SH_OUT CHAR(13),
-      DILUTED_SH_OUT CHAR(13),
-      CO_NAME_OR_CIK CHAR(60)
-    );
-    """
-
-    finwire_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+finwire_ddl+"\""
-    os.system(finwire_ddl_cmd)
-    
     base_path = "../staging/"+self.sf+"/Batch1/"
     s_company_base_query = "INSERT INTO S_Company VALUES "
     s_security_base_query = "INSERT INTO S_Security VALUES "
@@ -621,7 +551,7 @@ class TPCDI_Loader():
     s_security_values = []
     s_financial_values = []
     max_packet = 150
-    for fname in os.listdir(base_path):
+    for fname in os.listdir(base_path)[0:1]:
       if("FINWIRE" in fname and "audit" not in fname):
         with open(base_path+fname, 'r') as finwire_file:
           for line in finwire_file:
@@ -650,11 +580,14 @@ class TPCDI_Loader():
                 # Create query to load text data into tradeType table
                 s_company_load_query=s_company_base_query+','.join(s_company_values)
                 s_company_values = []
+
                 # Construct mysql client bash command to execute ddl and data loading query
-                s_company_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+s_company_load_query+"\""
-      
-                # Execute the command
-                os.system(s_company_load_cmd)
+                with oracledb.connect(
+                  user=self.oracle_user, password=self.oracle_pwd, 
+                  dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+                  with connection.cursor() as cursor:
+                      cursor.execute(s_company_load_query)
+                      
             elif rec_type == "SEC":
               symbol = line[18:33]
               issue_type = line[33:39]
@@ -674,10 +607,12 @@ class TPCDI_Loader():
                 s_security_load_query=s_security_base_query+','.join(s_security_values)
                 s_security_values = []
                 # Construct mysql client bash command to execute ddl and data loading query
-                s_security_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+s_security_load_query+"\""
-      
-                # Execute the command
-                os.system(s_security_load_cmd)
+                with oracledb.connect(
+                  user=self.oracle_user, password=self.oracle_pwd, 
+                  dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+                  with connection.cursor() as cursor:
+                      cursor.execute(s_security_load_query)
+
             elif rec_type == "FIN":
               year = line[18:22]
               quarter = line[22:23]
@@ -702,10 +637,11 @@ class TPCDI_Loader():
                 s_financial_load_query=s_financial_base_query+','.join(s_financial_values)
                 s_financial_values = []
                 # Construct mysql client bash command to execute ddl and data loading query
-                s_financial_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+s_financial_load_query+"\""
-      
-                # Execute the command
-                os.system(s_financial_load_cmd)
+                with oracledb.connect(
+                  user=self.oracle_user, password=self.oracle_pwd, 
+                  dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+                  with connection.cursor() as cursor:
+                      cursor.execute(s_financial_load_query)
 
   def load_target_dim_company(self):
     """

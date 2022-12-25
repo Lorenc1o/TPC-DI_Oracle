@@ -37,7 +37,7 @@ if __name__ == "__main__":
                 args.create_sql, args.load_path, overwrite=True)
 
             # Step 1: Load the batchDate table for this batch
-            loader.load_current_batch_date()
+            # loader.load_current_batch_date()
         
             # # Step 2: Load non-dependence tables
             loader.load_dim_date()
@@ -46,7 +46,7 @@ if __name__ == "__main__":
             loader.load_status_type()
             loader.load_tax_rate()
             loader.load_trade_type()
-            # loader.load_audit()
+            loader.load_audit()
             
             # # # Step 3: Load staging tables
             # loader.load_staging_finwire()
