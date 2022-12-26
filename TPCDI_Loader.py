@@ -2,6 +2,7 @@ import os
 import glob
 import xmltodict
 import oracledb
+import subprocess
 
 from utils import prepare_char_insertion, prepare_numeric_insertion
 
@@ -600,101 +601,21 @@ class TPCDI_Loader():
     """
     Create Dim Company table in the staging database and then load rows by joining staging_company, staging_industry, and staging StatusType
     """
-    # Create query to load text data into dim_company table
-    dim_company_load_query="""
-      INSERT INTO DimCompany (CompanyID,Status,Name,Industry,SPrating,isLowGrade,CEO,AddressLine1,AddressLine2,PostalCode,City,StateProv,Country,Description,FoundingDate,IsCurrent,BatchID,EffectiveDate,EndDate)
-      SELECT C.CIK,S.ST_NAME, C.COMPANY_NAME, I.IN_NAME,C.SP_RATING, IF(LEFT(C.SP_RATING,1)='A' OR LEFT (C.SP_RATING,3)='BBB','FALSE','TRUE'),
-            C.CEO_NAME, C.ADDR_LINE_1,C.ADDR_LINE_2, C.POSTAL_CODE, C.CITY, C.STATE_PROVINCE, C.COUNTRY, C.DESCRIPTION,
-            STR_TO_DATE(FOUNDING_DATE,'%Y%m%d'),TRUE, 1, STR_TO_DATE(LEFT(C.PTS,8),'%Y%m%d'), STR_TO_DATE('99991231','%Y%m%d')
-      FROM S_Company C
-      JOIN Industry I ON C.INDUSTRY_ID = I.IN_ID
-      JOIN StatusType S ON C.STATUS = S.ST_ID;
-    """
-    
-    # Handle type 2 slowly changing dimension on company
-    dim_company_sdc_query = """
-    CREATE TABLE sdc_dimcompany
-      LIKE DimCompany;
-    ALTER TABLE sdc_dimcompany
-      ADD COLUMN RN NUMERIC;
-    INSERT INTO sdc_dimcompany
-    SELECT *, ROW_NUMBER() OVER(ORDER BY CompanyID, EffectiveDate) RN
-    FROM DimCompany;
-
-    WITH candidate AS (
-    SELECT s1.SK_CompanyID,
-          s2.EffectiveDate EndDate
-    FROM sdc_dimcompany s1
-          JOIN sdc_dimcompany s2 ON (s1.RN = (s2.RN - 1) AND s1.CompanyID = s2.CompanyID))
-    UPDATE DimCompany,candidate SET DimCompany.EndDate = candidate.EndDate, DimCompany.IsCurrent=FALSE WHERE DimCompany.SK_CompanyID = candidate.SK_CompanyID;
-    DROP TABLE sdc_dimcompany;
-    """
-
-    # Construct mysql client bash command to execute ddl and data loading query
-    # dim_company_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+dim_company_ddl+"\""
-    # dim_company_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+dim_company_load_query+"\""
-    # dim_company_sdc_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+dim_company_sdc_query+"\""
+    # Create query to load data into DimCompany table from staging tables
+    cmd = TPCDI_Loader.BASE_SQL_CMD+" @%s " % (self.load_path+'/DimCompany.sql')
 
     # Execute the command
-    os.system(dim_company_ddl_cmd)
-    os.system(dim_company_load_cmd)    
-    os.system(dim_company_sdc_cmd)
+    os.system(cmd)
   
   def load_target_dim_security(self):
     """
-    Create Security table in the staging database and then load rows by ..
+    Create Security table in the staging database and then load rows by joining staging_security, status_type and dim_company
     """
     # Create query to load text data into security table
-    security_load_query="""
-    INSERT INTO DimSecurity (Symbol,Issue,Status,Name,ExchangeID,SK_CompanyID,SharesOutstanding,FirstTrade,FirstTradeOnExchange,Dividend,IsCurrent,BatchID,EffectiveDate,EndDate)
-    SELECT SS.SYMBOL,SS.ISSUE_TYPE, ST.ST_NAME, SS.NAME, SS.EX_ID, DC.SK_CompanyID, SS.SH_OUT, STR_TO_DATE(SS.FIRST_TRADE_DATE,'%Y%m%d'),
-          STR_TO_DATE(FIRST_TRADE_EXCHANGE, '%Y%m%d'), SS.DIVIDEN, TRUE, 1, STR_TO_DATE(LEFT(SS.PTS,8),'%Y%m%d'), STR_TO_DATE('99991231','%Y%m%d')
-    FROM S_Security SS
-    JOIN StatusType ST ON SS.STATUS = ST.ST_ID
-    JOIN DimCompany DC ON DC.SK_CompanyID = convert(SS.COMPANY_NAME_OR_CIK, SIGNED)
-                        AND DC.EffectiveDate <= STR_TO_DATE(LEFT(SS.PTS,8),'%Y%m%d')
-                        AND STR_TO_DATE(LEFT(SS.PTS,8),'%Y%m%d') < DC.EndDate
-                        AND LEFT(SS.COMPANY_NAME_OR_CIK,1)='0';
-
-    INSERT INTO DimSecurity (Symbol,Issue,Status,Name,ExchangeID,SK_CompanyID,SharesOutstanding,FirstTrade,FirstTradeOnExchange,Dividend,IsCurrent,BatchID,EffectiveDate,EndDate)
-    SELECT SS.SYMBOL,SS.ISSUE_TYPE, ST.ST_NAME, SS.NAME, SS.EX_ID, DC.SK_CompanyID, SS.SH_OUT, STR_TO_DATE(SS.FIRST_TRADE_DATE,'%Y%m%d'),
-          STR_TO_DATE(FIRST_TRADE_EXCHANGE, '%Y%m%d'), SS.DIVIDEN, TRUE, 1, STR_TO_DATE(LEFT(SS.PTS,8),'%Y%m%d'), STR_TO_DATE('99991231','%Y%m%d')
-    FROM S_Security SS
-    JOIN StatusType ST ON SS.STATUS = ST.ST_ID
-    JOIN DimCompany DC ON RTRIM(SS.COMPANY_NAME_OR_CIK) = DC.Name
-                        AND DC.EffectiveDate <= STR_TO_DATE(LEFT(SS.PTS,8),'%Y%m%d')
-                        AND STR_TO_DATE(LEFT(SS.PTS,8),'%Y%m%d') < DC.EndDate
-                        AND LEFT(SS.COMPANY_NAME_OR_CIK,1) <> '0';
-    """
-
-    dim_security_scd = """
-    CREATE TABLE sdc_dimsecurity
-      LIKE DimSecurity;
-    ALTER TABLE sdc_dimsecurity
-      ADD COLUMN RN NUMERIC;
-    INSERT INTO sdc_dimsecurity
-    SELECT *, ROW_NUMBER() OVER(ORDER BY Symbol, EffectiveDate) RN
-    FROM DimSecurity;
-
-    WITH candidate AS (SELECT s1.SK_SecurityID, s2.EffectiveDate EndDate
-                      FROM sdc_dimsecurity s1
-                              JOIN sdc_dimsecurity s2 ON (s1.RN = (s2.RN - 1) AND s1.Symbol = s2.Symbol))
-    UPDATE DimSecurity, candidate
-    SET DimSecurity.EndDate   = candidate.EndDate,
-        DimSecurity.IsCurrent = FALSE
-    WHERE DimSecurity.SK_SecurityID = candidate.SK_SecurityID;
-    DROP TABLE sdc_dimsecurity;
-    """
-    
-    # Construct mysql client bash command to execute ddl and data loading query
-    # dim_security_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+security_ddl+"\""
-    # dim_security_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+security_load_query+"\""
-    # dim_security_scd_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+dim_security_scd+"\""
+    cmd = TPCDI_Loader.BASE_SQL_CMD+" @%s " % (self.load_path+'/DimSecurity.sql')
 
     # Execute the command
-    os.system(dim_security_ddl_cmd)
-    os.system(dim_security_load_cmd)
-    os.system(dim_security_scd_cmd)
+    os.system(cmd)
 
   def load_target_financial(self):
     """
