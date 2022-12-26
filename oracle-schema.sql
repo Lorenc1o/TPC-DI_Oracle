@@ -377,6 +377,12 @@ CREATE TABLE S_Watches(
     W_ACTION CHAR(4) NOT NULL
 );
 
+CREATE TABLE S_Cash_Balances(
+    CT_CA_ID INTEGER NOT NULL,
+    CT_DTS DATE NOT NULL,
+    CT_AMT CHAR(20) NOT NULL,
+    CT_NAME CHAR(100) NOT NULL
+);
 -- CREATE INDEX PIndex ON dimtrade (tradeid);
 -- CREATE TABLE dimtradeforexperiment
 -- (
