@@ -403,31 +403,12 @@ class TPCDI_Loader():
 
   def load_staging_watches(self):
     """
-    Create S_Watches table in the staging database and then load rows in WatchHistory.txt into it.
+    Load rows in WatchHistory.txt into S_Watches table in staging database.
     """
 
-    # Create ddl to store watches
-    watches_ddl = """
-    USE """+self.db_name+""";
-
-    CREATE TABLE S_Watches(
-      W_C_ID INTEGER NOT NULL,
-      W_S_SYMB CHAR(15) NOT NULL,
-      W_DTS DATE NOT NULL,
-      W_ACTION CHAR(4) NOT NULL
-    );
-    """
-
-    # Create query to load text data into prospect table
-    watches_load_query="LOAD DATA LOCAL INFILE 'staging/"+self.sf+"/Batch1/WatchHistory.txt' INTO TABLE S_Watches COLUMNS TERMINATED BY '|';"
-    
-    # Construct mysql client bash command to execute ddl and data loading query
-    # watches_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+watches_ddl+"\""
-    # watches_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+watches_load_query+"\""
-    
-    # Execute the command
-    os.system(watches_ddl_cmd)
-    os.system(watches_load_cmd)
+    # Create query to load txt data into S_Watches table
+    cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/Watches.ctl', self.batch_dir + 'WatchHistory.txt')
+    os.system(cmd)
 
   def load_staging_prospect(self):
     """

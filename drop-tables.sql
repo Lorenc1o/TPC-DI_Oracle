@@ -23,4 +23,5 @@ drop table S_Company cascade constraints PURGE;
 drop table S_Security cascade constraints PURGE;
 drop table S_Financial cascade constraints PURGE;
 drop table S_Prospect cascade constraints PURGE;
+drop table S_Watches cascade constraints PURGE;
 exit
