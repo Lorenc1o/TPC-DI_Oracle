@@ -383,6 +383,18 @@ CREATE TABLE S_Cash_Balances(
     CT_AMT CHAR(20) NOT NULL,
     CT_NAME CHAR(100) NOT NULL
 );
+
+CREATE TABLE S_Broker(
+    EmployeeID INTEGER NOT NULL,
+    ManagerID INTEGER NOT NULL,
+    EmployeeFirstName CHAR(30) NOT NULL,
+    EmployeeLastName CHAR(30) NOT NULL,
+    EmployeeMI CHAR(1),
+    EmployeeJobCode NUMBER(3),
+    EmployeeBranch CHAR(30),
+    EmployeeOffice CHAR(10),
+    EmployeePhone CHAR(14)
+);
 -- CREATE INDEX PIndex ON dimtrade (tradeid);
 -- CREATE TABLE dimtradeforexperiment
 -- (

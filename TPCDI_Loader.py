@@ -322,36 +322,12 @@ class TPCDI_Loader():
   
   def load_staging_broker(self):
     """
-    Create S_Broker table in the staging database and then load rows in HR.csv into it.
+    Load rows in HR.csv into S_Broker table in staging database.
     """
 
-    # Create ddl to store broker
-    broker_ddl = """
-    USE """+self.db_name+""";
-
-    CREATE TABLE S_Broker(
-      EmployeeID INTEGER NOT NULL,
-      ManagerID INTEGER NOT NULL,
-      EmployeeFirstName CHAR(30) NOT NULL,
-      EmployeeLastName CHAR(30) NOT NULL,
-      EmployeeMI CHAR(1),
-      EmployeeJobCode NUMERIC(3),
-      EmployeeBranch CHAR(30),
-      EmployeeOffice CHAR(10),
-      EmployeePhone CHAR(14)
-    );
-    """
-
-    # Create query to load text data into broker table
-    broker_load_query="LOAD DATA LOCAL INFILE 'staging/"+self.sf+"/Batch1/HR.csv' INTO TABLE S_Broker COLUMNS TERMINATED BY ',';"
-    
-    # Construct mysql client bash command to execute ddl and data loading query
-    # broker_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+broker_ddl+"\""
-    # broker_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+broker_load_query+"\""
-    
-    # Execute the command
-    os.system(broker_ddl_cmd)
-    os.system(broker_load_cmd)
+    # Create query to load txt data into S_Watches table
+    cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/Broker.ctl', self.batch_dir + 'HR.csv')
+    os.system(cmd)
 
   def load_broker(self):
     """
