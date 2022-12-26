@@ -431,49 +431,12 @@ class TPCDI_Loader():
 
   def load_staging_prospect(self):
     """
-    Create S_Prospect table in the staging database and then load rows in Prospect.csv into it.
+    Load rows in Prospect.csv into S_Prospect table in staging database.
     """
 
-    # Create ddl to store prospect
-    prospect_ddl = """
-    USE """+self.db_name+""";
-
-    CREATE TABLE S_Prospect(
-      AGENCY_ID CHAR(30) NOT NULL,
-      LAST_NAME CHAR(30) NOT NULL,
-      FIRST_NAME CHAR(30) NOT NULL,
-      MIDDLE_INITIAL CHAR(1),
-      GENDER CHAR(1),
-      ADDRESS_LINE_1 CHAR(80),
-      ADDRESS_LINE_2 CHAR(80),
-      POSTAL_CODE CHAR(12),
-      CITY CHAR(25) NOT NULL,
-      STATE CHAR(20) NOT NULL,
-      COUNTRY CHAR(24),
-      PHONE CHAR(30),
-      INCOME NUMERIC(9),
-      NUMBER_CARS NUMERIC(2),
-      NUMBER_CHILDREM NUMERIC(2),
-      MARITAL_STATUS CHAR(1),
-      AGE NUMERIC(3),
-      CREDIT_RATING NUMERIC(4),
-      OWN_OR_RENT_FLAG CHAR(1),
-      EMPLOYER CHAR(30),
-      NUMBER_CREDIT_CARDS NUMERIC(2),
-      NET_WORTH NUMERIC(12)
-    );
-    """
-
-    # Create query to load text data into prospect table
-    prospect_load_query="LOAD DATA LOCAL INFILE 'staging/"+self.sf+"/Batch1/Prospect.csv' INTO TABLE S_Prospect COLUMNS TERMINATED BY ',';"
-    
-    # Construct mysql client bash command to execute ddl and data loading query
-    # prospect_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+prospect_ddl+"\""
-    # prospect_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+prospect_load_query+"\""
-    
-    # Execute the command
-    os.system(prospect_ddl_cmd)
-    os.system(prospect_load_cmd)
+    # Create query to load csv data into S_Prospect table
+    cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/Prospect.ctl', self.batch_dir + 'Prospect.csv')
+    os.system(cmd)
 
   def load_prospect(self):
     """

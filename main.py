@@ -10,11 +10,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-s", "--scalefactor", help="Scale factor used", required=True)
     parser.add_argument(
-        "-a", "--drop_sql", help="Path to the sql file for dropping all the tables", required=True)
+        "-a", "--drop_sql", help="Path to the sql file for dropping all the tables", required=False, default='drop-tables.sql')
     parser.add_argument(
-        "-c", "--create_sql", help="Path to the sql file for creating all the tables", required=True)
+        "-c", "--create_sql", help="Path to the sql file for creating all the tables", required=False, default='oracle-schema.sql')
     parser.add_argument(
-        "-l", "--load_path", help="Path to the sql file for loading all the tables", required=True)
+        "-l", "--load_path", help="Path to the sql file for loading all the tables", required=False, default='load')
 
     args = parser.parse_args()
 
@@ -49,8 +49,8 @@ if __name__ == "__main__":
             # loader.load_audit()
             
             # # # Step 3: Load staging tables
-            loader.load_staging_finwire()
-            # loader.load_staging_prospect()
+            # loader.load_staging_finwire()
+            loader.load_staging_prospect()
             # loader.load_staging_broker()
             # loader.load_staging_customer()
             # loader.load_staging_cash_balances()
