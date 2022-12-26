@@ -560,7 +560,7 @@ class TPCDI_Loader():
       if("FINWIRE" in fname and "audit" not in fname):
         print('YYYYYYYYYYYYes 1')
         with open(base_path+fname, 'r') as finwire_file:
-          for line in finwire_file:
+          for idx, line in enumerate(finwire_file):
             pts = line[:15] #0
             rec_type=line[15:18] #1
 
@@ -578,22 +578,29 @@ class TPCDI_Loader():
               state_province = line[303:323] #11
               country = line[323:347] #12
               ceo_name = line[347:393] #13
-              description = line[393:] #14
+              description = line[393:][:-1] #14
 
-              s_company_values.append("('%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s')"%(pts,rec_type,company_name,cik,status,industry_id,sp_rating,founding_date,addr_line_1,addr_line_2,postal_code,city,state_province,country,ceo_name,description))
+              s_company_values.append(
+                "%s (PTS,REC_TYPE,COMPANY_NAME,CIK,STATUS,INDUSTRY_ID,SP_RATING,FOUNDING_DATE,ADDR_LINE_1,"
+                "ADDR_LINE_2,POSTAL_CODE,CITY,STATE_PROVINCE,COUNTRY,CEO_NAME,DESCRIPTION) "
+                "VALUES ('%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s')"
+                %(
+                  s_company_base_query,
+                  pts,rec_type,company_name,cik,status,industry_id,sp_rating,founding_date,addr_line_1,
+                  addr_line_2,postal_code,city,state_province,country,ceo_name,description
+                ))
 
               if len(s_company_values)>=max_packet:
-                # Create query to load text data into tradeType table
-                s_company_load_query=s_company_base_query+','.join(s_company_values)
-                s_company_values = []
-
-                # Construct mysql client bash command to execute ddl and data loading query
                 print("yes 1")
+                # Create query to load text data into tradeType table
                 with oracledb.connect(
                   user=self.oracle_user, password=self.oracle_pwd, 
                   dsn=self.oracle_host+'/'+self.oracle_db) as connection:
                   with connection.cursor() as cursor:
-                      cursor.execute(s_company_load_query)
+                    for query in s_company_values:
+                      cursor.execute(query)
+                  connection.commit()
+                s_company_values = []
                       
             elif rec_type == "SEC":
               symbol = line[18:33]
@@ -605,21 +612,28 @@ class TPCDI_Loader():
               first_trade_date = line[132:140]
               first_trade_exchange = line[140:148]
               dividen = line[148:160]
-              company_name = line[160:] 
+              company_name = line[160:][:-1]
               
-              s_security_values.append("('%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s')"%(pts,rec_type,symbol,issue_type,status,name,ex_id,sh_out,first_trade_date,first_trade_exchange,dividen,company_name))
+              s_security_values.append(
+                "%s (PTS,REC_TYPE,SYMBOL,ISSUE_TYPE,STATUS,NAME,EX_ID,SH_OUT,FIRST_TRADE_DATE,FIRST_TRADE_EXCHANGE,"
+                "DIVIDEN,COMPANY_NAME_OR_CIK)"
+                "VALUES ('%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s')"
+                %(
+                  s_security_base_query,
+                  pts,rec_type,symbol,issue_type,status,name,ex_id,sh_out,first_trade_date,
+                  first_trade_exchange,dividen,company_name))
 
               if len(s_security_values)>=max_packet:
-                # Create query to load text data into tradeType table
-                s_security_load_query=s_security_base_query+','.join(s_security_values)
-                s_security_values = []
-                # Construct mysql client bash command to execute ddl and data loading query
                 print('yes 2')
+                # Create query to load text data into tradeType table
                 with oracledb.connect(
                   user=self.oracle_user, password=self.oracle_pwd, 
                   dsn=self.oracle_host+'/'+self.oracle_db) as connection:
                   with connection.cursor() as cursor:
-                      cursor.execute(s_security_load_query)
+                    for query in s_security_values:
+                      cursor.execute(query)
+                  connection.commit()
+                s_security_values = []
 
             elif rec_type == "FIN":
               year = line[18:22]
@@ -636,7 +650,7 @@ class TPCDI_Loader():
               liabilities = line[143:160]
               sh_out = line[160:173]
               diluted_sh_out = line[173:186]
-              co_name_or_cik = line[186:]
+              co_name_or_cik = line[186:][:-1]
 
               s_financial_values.append(
                 "%s (PTS, REC_TYPE, YEAR,QUARTER,QTR_START_DATE,POSTING_DATE,REVENUE,EARNINGS,EPS,DILUTED_EPS,"
@@ -653,9 +667,9 @@ class TPCDI_Loader():
                   user=self.oracle_user, password=self.oracle_pwd, 
                   dsn=self.oracle_host+'/'+self.oracle_db) as connection:
                   with connection.cursor() as cursor:
-                    for query in s_financial_values[0:1]:
-                      print('query',query)
+                    for query in s_financial_values:
                       cursor.execute(query)
+                  connection.commit()
                 s_financial_values = []
 
   def load_target_dim_company(self):
