@@ -333,19 +333,20 @@ class TPCDI_Loader():
     """
     Create DimBroker table in the target database and then load rows in HR.csv into it.
     """
-    # Create query to load text data into broker table
-    # dim_broker_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+dim_broker_ddl+"\""
-    # Execute the command
-    os.system(dim_broker_ddl_cmd)
-    
     load_dim_broker_query = """
       INSERT INTO DimBroker (BrokerID,ManagerID,FirstName,LastName,MiddleInitial,Branch,Office,Phone,IsCurrent,BatchID,EffectiveDate,EndDate)
-      SELECT SB.EmployeeID, SB.ManagerID, SB.EmployeeFirstName, SB.EmployeeLastName, SB.EmployeeMI, SB.EmployeeBranch, SB.EmployeeOffice, SB.EmployeePhone, TRUE, 1, (SELECT d_d.DateValue FROM DimDate d_d ORDER BY d_d.DateValue ASC LIMIT 1), STR_TO_DATE('99991231','%Y%m%d')
+      SELECT SB.EmployeeID, SB.ManagerID, SB.EmployeeFirstName, SB.EmployeeLastName, SB.EmployeeMI, SB.EmployeeBranch, SB.EmployeeOffice, SB.EmployeePhone, 'true', %d, (SELECT MIN(DateValue) FROM DimDate), TO_DATE('9999/12/31', 'yyyy/mm/dd')
       FROM S_Broker SB
-      WHERE SB.EmployeeJobCode = 314;
-    """
-    # load_dim_broker_cmd = dim_broker_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+load_dim_broker_query+"\""
-    os.system(load_dim_broker_cmd)
+      WHERE SB.EmployeeJobCode = 314
+    """ % (self.batch_number)
+    print(load_dim_broker_query)
+
+    with oracledb.connect(
+      user=self.oracle_user, password=self.oracle_pwd, 
+      dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+      with connection.cursor() as cursor:
+        cursor.execute(load_dim_broker_query)
+      connection.commit()
 
 
   def load_staging_cash_balances(self):
