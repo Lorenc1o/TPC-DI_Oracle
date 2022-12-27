@@ -37,10 +37,10 @@ if __name__ == "__main__":
                 args.create_sql, args.load_path, overwrite=True)
 
             # Step 1: Load the batchDate table for this batch
-            # loader.load_current_batch_date()
+            loader.load_current_batch_date()
         
             # # Step 2: Load non-dependence tables
-            # loader.load_dim_date()
+            loader.load_dim_date()
             # loader.load_dim_time()
             # loader.load_industry()
             # loader.load_status_type()
@@ -50,8 +50,8 @@ if __name__ == "__main__":
             
             # # # Step 3: Load staging tables
             # loader.load_staging_finwire()
-            # loader.load_staging_prospect()
-            loader.load_staging_broker()
+            loader.load_staging_prospect()
+            # loader.load_staging_broker()
             # loader.load_staging_customer()
             # loader.load_staging_cash_balances()
             # loader.load_staging_watches()
@@ -60,7 +60,7 @@ if __name__ == "__main__":
             # loader.load_target_dim_company()
             # loader.load_target_financial()
             # loader.load_target_dim_security()
-            # loader.load_prospect()
+            loader.load_prospect()
             # loader.load_broker()
     end = time.time()
     print(end-start)

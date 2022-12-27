@@ -376,64 +376,54 @@ class TPCDI_Loader():
     os.system(cmd)
 
   def load_prospect(self):
-    """
-    Create Prospect table in the target database and then load rows in Prospect.csv into it.
-    """
-    # Create query to load text data into prospect table
-    # prospect_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+prospect_ddl+"\""
-    # Execute the command
-    os.system(prospect_ddl_cmd)
-
-    # Create function to get marketing_nameplate
-    marketing_nameplate_function_definition_ddl = """
-    DELIMITER //
-    CREATE OR REPLACE FUNCTION get_marketing_template(net_worth NUMERIC, income NUMERIC,
-        number_credit_cards NUMERIC, number_children NUMERIC, age NUMERIC,
-        credit_rating NUMERIC, number_cars NUMERIC)
-        RETURNS CHAR(100) AS
-      DECLARE
-        marketing_template CHAR(100) = '';
-      BEGIN
+    marketing_nameplate_func = """
+    CREATE OR REPLACE FUNCTION get_marketing_template(net_worth NUMBER, income NUMBER,
+    number_credit_cards NUMBER, number_children NUMBER, age NUMBER,
+    credit_rating NUMBER, number_cars NUMBER)
+    RETURN VARCHAR AS
+        marketing_template VARCHAR(100);
+    BEGIN
         IF (net_worth>1000000 OR income>200000) THEN
-          marketing_template =  CONCAT(marketing_template, '+HighValue');
+            marketing_template :=  CONCAT(marketing_template, 'HighValue+');
         END IF;
         IF (number_credit_cards>5 OR number_children>3) THEN
-          marketing_template =  CONCAT(marketing_template, '+Expenses');
+          marketing_template :=  CONCAT(marketing_template, 'Expenses+');
         END IF;
         IF (age>45) THEN
-          marketing_template =  CONCAT(marketing_template, '+Boomer');
+          marketing_template :=  CONCAT(marketing_template, 'Boomer+');
         END IF;
         IF (credit_rating<600 or income <5000 or net_worth < 100000) THEN
-          marketing_template =  CONCAT(marketing_template, '+MoneyAlert');
+          marketing_template :=  CONCAT(marketing_template, 'MoneyAlert+');
         END IF;
         IF (number_cars>3 or number_credit_cards>7) THEN
-          marketing_template =  CONCAT(marketing_template, '+Spender');
+          marketing_template :=  CONCAT(marketing_template, 'Spender+');
         END IF;
         IF (age>25 or net_worth>1000000) THEN
-          marketing_template =  CONCAT(marketing_template, '+Inherited');
+          marketing_template :=  CONCAT(marketing_template, 'Inherited+');
         END IF;
-        RETURN RIGHT(marketing_template,character_length(marketing_template)-1);
-      END //
-    DELIMITER ;
+        RETURN SUBSTR(marketing_template, 1, LENGTH(marketing_template) - 1);
+    END;
     """
-    # marketing_nameplate_function_definition_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+marketing_nameplate_function_definition_ddl+"\""
-    os.system(marketing_nameplate_function_definition_cmd)
-    
-    load_prospect_query = """
+    #TODO: Change IsCustomer when staging customer is implemented
+    load_prospect_query = """   
     INSERT INTO Prospect
-    SELECT SP.AGENCY_ID, (SELECT b_d.batch_date FROM batch_date b_d WHERE b_d.batch_number=%s) SK_RecordDateID,
-          (SELECT b_d.batch_date FROM batch_date b_d WHERE b_d.batch_number=%s) SK_UpdateDateID, %s, FALSE, SP.LAST_NAME,
-          SP.FIRST_NAME, SP.MIDDLE_INITIAL, SP.GENDER, SP.ADDRESS_LINE_1, SP.ADDRESS_LINE_2, SP.POSTAL_CODE, SP.CITY,
+    SELECT SP.AGENCY_ID, (SELECT SK_DateID FROM DimDate WHERE DateValue IN (SELECT BatchDate FROM BatchDate WHERE BatchNumber = {0})) SK_RecordDateID,
+          (SELECT SK_DateID FROM DimDate WHERE DateValue IN (SELECT BatchDate FROM BatchDate WHERE BatchNumber = {0})) SK_UpdateDateID, {0} BatchID, 
+          'false' IsCustomer, SP.LAST_NAME, SP.FIRST_NAME, SP.MIDDLE_INITIAL, SP.GENDER, SP.ADDRESS_LINE_1, SP.ADDRESS_LINE_2, SP.POSTAL_CODE, SP.CITY,
           SP.STATE, SP.COUNTRY, SP.PHONE, SP.INCOME, SP.NUMBER_CARS,SP.NUMBER_CHILDREM, SP.MARITAL_STATUS, SP.AGE,
-          SP.CREDIT_RATING, SP.OWN_OR_RENT_FLAG, SP.EMPLOYER,SP.NUMBER_CREDIT_CARDS, SP.NET_WORTH, (SELECT get_marketing_template(SP.NET_WORTH, SP.INCOME, SP.NUMBER_CREDIT_CARDS, SP.NUMBER_CHILDREM, SP.AGE,
-                      SP.CREDIT_RATING, SP.NUMBER_CARS) ) MarketingNameplate
-    FROM S_Prospect SP;
+          SP.CREDIT_RATING, SP.OWN_OR_RENT_FLAG, SP.EMPLOYER,SP.NUMBER_CREDIT_CARDS, SP.NET_WORTH, 
+          get_marketing_template(SP.NET_WORTH, SP.INCOME, SP.NUMBER_CREDIT_CARDS, SP.NUMBER_CHILDREM, SP.AGE, SP.CREDIT_RATING, SP.NUMBER_CARS) MarketingNameplate
+    FROM S_Prospect SP
+    """.format(self.batch_number)    
+    print(load_prospect_query)
 
-    INSERT INTO DImessages
-	    SELECT current_timestamp(),%s,'Prospect', 'Inserted rows', 'Status', (SELECT COUNT(*) FROM Prospect);
-    """%(str(self.batch_number),str(self.batch_number),str(self.batch_number),str(self.batch_number))
-    # load_prospect_cmd = prospect_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+load_prospect_query+"\""
-    os.system(load_prospect_cmd)
+    with oracledb.connect(
+      user=self.oracle_user, password=self.oracle_pwd, 
+      dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+      with connection.cursor() as cursor:
+        cursor.execute(marketing_nameplate_func)
+        cursor.execute(load_prospect_query)
+      connection.commit()
   
   def load_audit(self):
     """
