@@ -602,6 +602,8 @@ class TPCDI_Loader():
                 query += "NULL"
               query += ")"
 
+              print(query)
+
               s_company_values.append(query)
 
               if len(s_company_values)>=max_packet:
