@@ -538,7 +538,7 @@ class TPCDI_Loader():
               if description.strip() == "":
                 description = "NULL"
 
-              """s_company_values.append(
+              s_company_values.append(
                 "%s (PTS,REC_TYPE,COMPANY_NAME,CIK,STATUS,INDUSTRY_ID,SP_RATING,FOUNDING_DATE,ADDR_LINE_1,"
                 "ADDR_LINE_2,POSTAL_CODE,CITY,STATE_PROVINCE,COUNTRY,CEO_NAME,DESCRIPTION) "
                 "VALUES ('%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s')"
@@ -546,11 +546,12 @@ class TPCDI_Loader():
                   s_company_base_query,
                   pts,rec_type,company_name,cik,status,industry_id,sp_rating,founding_date,addr_line_1,
                   addr_line_2,postal_code,city,state_province,country,ceo_name,description
-                ))"""
+                ))
               
-              s_company_values.append( "%s (PTS,REC_TYPE,COMPANY_NAME,CIK,STATUS,INDUSTRY_ID,SP_RATING,FOUNDING_DATE,ADDR_LINE_1,"
+              s_company_values.append( 
+                "%s (PTS,REC_TYPE,COMPANY_NAME,CIK,STATUS,INDUSTRY_ID,SP_RATING,FOUNDING_DATE,ADDR_LINE_1,"
                 "ADDR_LINE_2,POSTAL_CODE,CITY,STATE_PROVINCE,COUNTRY,CEO_NAME,DESCRIPTION) "
-                "VALUES ('%s','%s'," % s_company_base_query, pts, rec_type)
+                "VALUES ('%s','%s'," % (s_company_base_query, pts, rec_type))
               
               # now we add all the values which are not "NULL"
               if company_name != "NULL":
