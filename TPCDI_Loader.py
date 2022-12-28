@@ -602,8 +602,6 @@ class TPCDI_Loader():
                 query += "NULL"
               query += ")"
 
-              print(query)
-
               s_company_values.append(query)
 
               if len(s_company_values)>=max_packet:
@@ -614,6 +612,7 @@ class TPCDI_Loader():
                   dsn=self.oracle_host+'/'+self.oracle_db) as connection:
                   with connection.cursor() as cursor:
                     for query in s_company_values:
+                      print(query)
                       cursor.execute(query)
                   connection.commit()
                 s_company_values = []
