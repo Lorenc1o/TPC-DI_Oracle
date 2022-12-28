@@ -491,21 +491,54 @@ class TPCDI_Loader():
 
             if rec_type=="CMP":
               company_name = line[18:78] #2
+              # check if company name is made of blanks
+              if company_name.strip() == "":
+                company_name = "NULL"
               cik = line[78:88] #3
               status = line[88:92] #4
               industry_id = line[92:94] #5
               sp_rating = line[94:98] # 6
+              # check if sp rating is made of blanks
+              if sp_rating.strip() == "":
+                sp_rating = "NULL"
               founding_date = line[98:106] #7
+              # check if founding date is made of blanks
+              if founding_date.strip() == "":
+                founding_date = "NULL"
               addr_line_1 = line[106:186] #8
+              # check if address line 1 is made of blanks
+              if addr_line_1.strip() == "":
+                addr_line_1 = "NULL"
               addr_line_2 = line[186:266] #9
+              # check if address line 2 is made of blanks
+              if addr_line_2.strip() == "":
+                addr_line_2 = "NULL"
               postal_code = line[266:278] #10
+              # check if postal code is made of blanks
+              if postal_code.strip() == "":
+                postal_code = "NULL"
               city = line[278:303] #10
+              # check if city is made of blanks
+              if city.strip() == "":
+                city = "NULL"
               state_province = line[303:323] #11
+              # check if state province is made of blanks
+              if state_province.strip() == "":
+                state_province = "NULL"
               country = line[323:347] #12
+              # check if country is made of blanks
+              if country.strip() == "":
+                country = "NULL"
               ceo_name = line[347:393] #13
+              # check if ceo name is made of blanks
+              if ceo_name.strip() == "":
+                ceo_name = "NULL"
               description = line[393:][:-1] #14
+              # check if description is made of blanks
+              if description.strip() == "":
+                description = "NULL"
 
-              s_company_values.append(
+              """s_company_values.append(
                 "%s (PTS,REC_TYPE,COMPANY_NAME,CIK,STATUS,INDUSTRY_ID,SP_RATING,FOUNDING_DATE,ADDR_LINE_1,"
                 "ADDR_LINE_2,POSTAL_CODE,CITY,STATE_PROVINCE,COUNTRY,CEO_NAME,DESCRIPTION) "
                 "VALUES ('%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s')"
@@ -513,7 +546,38 @@ class TPCDI_Loader():
                   s_company_base_query,
                   pts,rec_type,company_name,cik,status,industry_id,sp_rating,founding_date,addr_line_1,
                   addr_line_2,postal_code,city,state_province,country,ceo_name,description
-                ))
+                ))"""
+              
+              s_company_values.append( "%s (PTS,REC_TYPE,COMPANY_NAME,CIK,STATUS,INDUSTRY_ID,SP_RATING,FOUNDING_DATE,ADDR_LINE_1,"
+                "ADDR_LINE_2,POSTAL_CODE,CITY,STATE_PROVINCE,COUNTRY,CEO_NAME,DESCRIPTION) "
+                "VALUES ('%s','%s'," % s_company_base_query, pts, rec_type)
+              
+              # now we add all the values which are not "NULL"
+              if company_name != "NULL":
+                s_company_values.append("'%s'," % company_name)
+              s_company_values.append("'%s'," % cik)
+              s_company_values.append("'%s'," % status)
+              s_company_values.append("'%s'," % industry_id)
+              if sp_rating != "NULL":
+                s_company_values.append("'%s'," % sp_rating)
+              if founding_date != "NULL":
+                s_company_values.append("'%s'," % founding_date)
+              if addr_line_1 != "NULL":
+                s_company_values.append("'%s'," % addr_line_1)
+              if addr_line_2 != "NULL":
+                s_company_values.append("'%s'," % addr_line_2)
+              if postal_code != "NULL":
+                s_company_values.append("'%s'," % postal_code)
+              if city != "NULL":
+                s_company_values.append("'%s'," % city)
+              if state_province != "NULL":
+                s_company_values.append("'%s'," % state_province)
+              if country != "NULL":
+                s_company_values.append("'%s'," % country)
+              if ceo_name != "NULL":
+                s_company_values.append("'%s'," % ceo_name)
+              if description != "NULL":
+                s_company_values.append("'%s')" % description)
 
               if len(s_company_values)>=max_packet:
                 print("yes 1")
