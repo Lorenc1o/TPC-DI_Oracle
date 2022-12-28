@@ -538,6 +538,10 @@ class TPCDI_Loader():
               if description.strip() == "":
                 description = "NULL"
 
+              query = "%s (PTS,REC_TYPE,COMPANY_NAME,CIK,STATUS,INDUSTRY_ID,SP_RATING,FOUNDING_DATE,ADDR_LINE_1,"
+                "ADDR_LINE_2,POSTAL_CODE,CITY,STATE_PROVINCE,COUNTRY,CEO_NAME,DESCRIPTION) "
+                "VALUES ('%s','%s'," % (s_company_base_query, pts, rec_type)
+
               """s_company_values.append(
                 "%s (PTS,REC_TYPE,COMPANY_NAME,CIK,STATUS,INDUSTRY_ID,SP_RATING,FOUNDING_DATE,ADDR_LINE_1,"
                 "ADDR_LINE_2,POSTAL_CODE,CITY,STATE_PROVINCE,COUNTRY,CEO_NAME,DESCRIPTION) "
@@ -548,63 +552,60 @@ class TPCDI_Loader():
                   addr_line_2,postal_code,city,state_province,country,ceo_name,description
                 ))"""
               
-              s_company_values.append( 
-                "%s (PTS,REC_TYPE,COMPANY_NAME,CIK,STATUS,INDUSTRY_ID,SP_RATING,FOUNDING_DATE,ADDR_LINE_1,"
-                "ADDR_LINE_2,POSTAL_CODE,CITY,STATE_PROVINCE,COUNTRY,CEO_NAME,DESCRIPTION) "
-                "VALUES ('%s','%s'," % (s_company_base_query, pts, rec_type))
-              
               # now we add all the values which are not "NULL"
               if company_name != "NULL":
-                s_company_values.append("'%s'," % company_name)
+                query += "'%s'," % company_name
               else:
-                s_company_values.append("NULL,")
+                query += "NULL,"
               s_company_values.append("'%s'," % cik)
               s_company_values.append("'%s'," % status)
               s_company_values.append("'%s'," % industry_id)
               if sp_rating != "NULL":
-                s_company_values.append("'%s'," % sp_rating)
+                query += "'%s'," % sp_rating
               else:
-                s_company_values.append("NULL,")
+                query += "NULL,"
               if founding_date != "NULL":
-                s_company_values.append("'%s'," % founding_date)
+                query += "'%s'," % founding_date
               else:
-                s_company_values.append("NULL,")
+                query += "NULL,"
               if addr_line_1 != "NULL":
-                s_company_values.append("'%s'," % addr_line_1)
+                query += "'%s'," % addr_line_1
               else:
-                s_company_values.append("NULL,")
+                query += "NULL,"
               if addr_line_2 != "NULL":
-                s_company_values.append("'%s'," % addr_line_2)
+                query += "'%s'," % addr_line_2
               else:
-                s_company_values.append("NULL,")
+                query += "NULL,"
               if postal_code != "NULL":
-                s_company_values.append("'%s'," % postal_code)
+                query += "'%s'," % postal_code
               else:
-                s_company_values.append("NULL,")
+                query += "NULL,"
               if city != "NULL":
-                s_company_values.append("'%s'," % city)
+                query += "'%s'," % city
               else:
-                s_company_values.append("NULL,")
+                query += "NULL,"
               if state_province != "NULL":
-                s_company_values.append("'%s'," % state_province)
+                query += "'%s'," % state_province
               else:
-                s_company_values.append("NULL,")
+                query += "NULL,"
               if country != "NULL":
-                s_company_values.append("'%s'," % country)
+                query += "'%s'," % country
               else:
-                s_company_values.append("NULL,")
+                query += "NULL,"
               if ceo_name != "NULL":
-                s_company_values.append("'%s'," % ceo_name)
+                query += "'%s'," % ceo_name
               else:
-                s_company_values.append("NULL,")
+                query += "NULL,"
               if description != "NULL":
-                s_company_values.append("'%s')" % description)
+                query += "'%s'" % description
               else:
-                s_company_values.append("NULL)")
+                query += "NULL"
+              query += ")"
+
+              s_company_values.append(query)
 
               if len(s_company_values)>=max_packet:
                 print("yes 1")
-                print(s_company_values)
                 # Create query to load text data into tradeType table
                 with oracledb.connect(
                   user=self.oracle_user, password=self.oracle_pwd, 
