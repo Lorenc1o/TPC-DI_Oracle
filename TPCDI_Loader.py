@@ -260,7 +260,7 @@ class TPCDI_Loader():
     load_query = """
       INSERT INTO DimCustomer(CustomerID, TaxID, Status, LastName, FirstName, MiddleInitial, Gender, Tier, DOB, AddressLine1, AddressLine2, PostalCode,
                 City, StateProv, Country, Phone1, Phone2, Phone3, Email1, Email2, NationalTaxRateDesc, NationalTaxRate, LocalTaxRateDesc, LocalTaxRate, EffectiveDate, 
-                EndDate, BatchId, AgencyID, CreditRating, NetWorth, MarketingNameplate)
+                EndDate, BatchId, AgencyID, CreditRating, NetWorth, MarketingNameplate, IsCurrent)
       WITH Copied AS (
           SELECT C.CustomerID, C.TaxID, C.Status, C.LastName, C.FirstName, C.MiddleInitial, C.Gender, C.Tier, C.DOB, C.AddressLine1, C.AddressLine2, C.PostalCode,
               C.City, C.StateProv, C.Country, C.Phone1, C.Phone2, C.Phone3, C.Email1, C.Email2, C.NationalTaxRateDesc, C.NationalTaxRate, C.LocalTaxRateDesc, C.LocalTaxRate, C.EffectiveDate, 
@@ -281,7 +281,7 @@ class TPCDI_Loader():
       )
       SELECT C.CustomerID, C.TaxID, C.Status, C.LastName, C.FirstName, C.MiddleInitial, C.Gender, C.Tier, C.DOB, C.AddressLine1, C.AddressLine2, C.PostalCode,
               C.City, C.StateProv, C.Country, C.Phone1, C.Phone2, C.Phone3, C.Email1, C.Email2, C.NationalTaxRateDesc, C.NationalTaxRate, C.LocalTaxRateDesc, C.LocalTaxRate, C.EffectiveDate, 
-              C.EndDate, C.BatchId, CP.AgencyID, CP.CreditRating, CP.NetWorth, CP.MarketingNameplate
+              C.EndDate, C.BatchId, CP.AgencyID, CP.CreditRating, CP.NetWorth, CP.MarketingNameplate, 'true'
       FROM S_Customer C LEFT OUTER JOIN Copied CP ON (C.CustomerID = CP.CustomerID)
       WHERE C.ActionType = 'NEW'
     """
@@ -330,9 +330,31 @@ class TPCDI_Loader():
     update_query_national_tax_rate = base_update_query % ('C.NationalTaxRate', 'C.NationalTaxRate')
     update_query_local_tax_rate_desc = base_update_query % ('C.LocalTaxRateDesc', 'C.LocalTaxRateDesc')
     update_query_local_tax_rate = base_update_query % ('C.LocalTaxRate', 'C.LocalTaxRate')
-    update_query_agency_id = base_update_query % ('C.AgencyID', 'CP.AgencyID')
-    update_query_credit_rating = base_update_query % ('C.CreditRating', 'CP.CreditRating')
-
+    # Finally, we update the EndDate field and the isCurrent field for all rows in the DimCustomer table
+    # for which there is a row in S_Customer with an ActionType of 'INACT'
+    update_query_end_date = """
+      UPDATE DimCustomer C
+      SET C.EndDate = (
+        SELECT MAX(C1.EffectiveDate)
+        FROM S_Customer C1
+        WHERE C1.CustomerID = C.CustomerID AND
+          C1.ActionType = 'INACT' AND
+          NOT EXISTS (
+            SELECT * FROM S_Customer C2
+            WHERE C2.CustomerID = C1.CustomerID AND
+              C2.ActionType = 'INACT' AND C2.EffectiveDate > C1.EffectiveDate)
+      ),
+      C.isCurrent = 'false'
+      WHERE EXISTS (
+        SELECT * FROM S_Customer C1
+        WHERE C1.CustomerID = C.CustomerID AND
+          C1.ActionType = 'INACT' AND
+          NOT EXISTS (
+            SELECT * FROM S_Customer C2
+            WHERE C2.CustomerID = C1.CustomerID AND
+              C2.ActionType = 'INACT' AND C2.EffectiveDate > C1.EffectiveDate)
+      )
+    """
 
     print(load_query)
     with oracledb.connect(
@@ -340,6 +362,29 @@ class TPCDI_Loader():
       dsn=self.oracle_host+'/'+self.oracle_db) as connection:
       with connection.cursor() as cursor:
         cursor.execute(load_query)
+        cursor.execute(update_query_status)
+        cursor.execute(update_query_last_name)
+        cursor.execute(update_query_first_name)
+        cursor.execute(update_query_middle_initial)
+        cursor.execute(update_query_gender)
+        cursor.execute(update_query_tier)
+        cursor.execute(update_query_dob)
+        cursor.execute(update_query_address_line1)
+        cursor.execute(update_query_address_line2)
+        cursor.execute(update_query_postal_code)
+        cursor.execute(update_query_city)
+        cursor.execute(update_query_state_prov)
+        cursor.execute(update_query_country)
+        cursor.execute(update_query_phone1)
+        cursor.execute(update_query_phone2)
+        cursor.execute(update_query_phone3)
+        cursor.execute(update_query_email1)
+        cursor.execute(update_query_email2)
+        cursor.execute(update_query_national_tax_rate_desc)
+        cursor.execute(update_query_national_tax_rate)
+        cursor.execute(update_query_local_tax_rate_desc)
+        cursor.execute(update_query_local_tax_rate)
+        cursor.execute(update_query_end_date)
       connection.commit()
             
   
