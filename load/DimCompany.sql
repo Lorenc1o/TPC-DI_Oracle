@@ -1,13 +1,13 @@
-INSERT INTO DimCompany (CompanyID,Status,Name,Industry,SPrating,isLowGrade,CEO,AddressLine1,AddressLine2,PostalCode,City,StateProv,Country,Description,FoundingDate,IsCurrent,BatchID,EffectiveDate,EndDate)
-SELECT C.CIK, S.ST_NAME, C.COMPANY_NAME, I.IN_NAME,C.SP_RATING, 
+INSERT INTO DimCompany (SK_CompanyID,CompanyID, Status,Name,Industry,SPrating,isLowGrade,CEO,AddressLine1,AddressLine2,PostalCode,City,StateProv,Country,Description,FoundingDate,IsCurrent,BatchID,EffectiveDate,EndDate)
+SELECT C.CIK, C.CIK, S.ST_NAME, C.COMPANY_NAME, I.IN_NAME,C.SP_RATING, 
     CASE 
         WHEN LPAD(C.SP_RATING,1)='A' OR LPAD(C.SP_RATING,3)='BBB' THEN
-            'FALSE'
+            'false'
         ELSE
-            'TRUE'
+            'true'
         END,
     C.CEO_NAME, C.ADDR_LINE_1,C.ADDR_LINE_2, C.POSTAL_CODE, C.CITY, C.STATE_PROVINCE, C.COUNTRY, C.DESCRIPTION,
-    TO_DATE(FOUNDING_DATE,'YYYY-MM-DD'),'true', 1, TO_DATE(LPAD(C.PTS,8),'YYYY-MM-DD'), TO_DATE('99991231','YYYY-MM-DD')
+    TO_DATE(FOUNDING_DATE,'YYYYMMDD'),'true', 1, TO_DATE(LPAD(C.PTS,8),'YYYYMMDD'), TO_DATE('99991231','YYYYMMDD')
 FROM S_Company C
 JOIN Industry I ON C.INDUSTRY_ID = I.IN_ID
 JOIN StatusType S ON C.STATUS = S.ST_ID;
