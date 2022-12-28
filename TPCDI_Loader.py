@@ -37,10 +37,8 @@ class TPCDI_Loader():
     TPCDI_Loader.BASE_SQLLDR_CMD = 'sqlldr userid=%s/%s@%s/%s' % (
       self.oracle_user, self.oracle_pwd, self.oracle_host, self.oracle_db
     )
-    print(TPCDI_Loader.BASE_SQLLDR_CMD)
     # Drop database if it is exists and overwrite param is set to True
     if overwrite:
-      print('YYYYYYYYYYYYes 0')
       # dropping the tables
       cmd = TPCDI_Loader.BASE_SQL_CMD+' @%s' % (drop_sql)
       os.system(cmd)
@@ -483,11 +481,9 @@ class TPCDI_Loader():
     s_financial_values = []
     max_packet = 150
     for fname in os.listdir(base_path):
-      print('fname', fname)
       if("FINWIRE" in fname and "audit" not in fname):
-        print('YYYYYYYYYYYYes 1')
         with open(base_path+fname, 'r') as finwire_file:
-          for idx, line in enumerate(finwire_file):
+          for line in finwire_file:
             pts = line[:15] #0
             rec_type=line[15:18] #1
 
@@ -555,7 +551,6 @@ class TPCDI_Loader():
                 ))
 
               if len(s_company_values)>=max_packet:
-                print("yes 1")
                 # Create query to load text data into tradeType table
                 with oracledb.connect(
                   user=self.oracle_user, password=self.oracle_pwd, 
@@ -588,7 +583,6 @@ class TPCDI_Loader():
                   first_trade_exchange,dividen,company_name))
 
               if len(s_security_values)>=max_packet:
-                print('yes 2')
                 # Create query to load text data into tradeType table
                 with oracledb.connect(
                   user=self.oracle_user, password=self.oracle_pwd, 
@@ -625,7 +619,6 @@ class TPCDI_Loader():
                   ))
 
               if len(s_financial_values)>=max_packet:
-                print('yes 3')
                 # Create query to load text data into tradeType table
                 with oracledb.connect(
                   user=self.oracle_user, password=self.oracle_pwd, 
@@ -636,6 +629,35 @@ class TPCDI_Loader():
                   connection.commit()
                 s_financial_values = []
 
+        # after reading each line, save all the records that are left in the arrays (<150)
+
+        with oracledb.connect(
+          user=self.oracle_user, password=self.oracle_pwd, 
+          dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+          with connection.cursor() as cursor:
+            for query in s_company_values:
+              cursor.execute(query)
+          connection.commit()
+        s_company_values = []
+
+        with oracledb.connect(
+          user=self.oracle_user, password=self.oracle_pwd, 
+          dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+          with connection.cursor() as cursor:
+            for query in s_security_values:
+              cursor.execute(query)
+          connection.commit()
+        s_security_values = []
+
+        with oracledb.connect(
+          user=self.oracle_user, password=self.oracle_pwd, 
+          dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+          with connection.cursor() as cursor:
+            for query in s_financial_values:
+              cursor.execute(query)
+          connection.commit()
+        s_financial_values = []
+          
   def load_target_dim_company(self):
     """
     Create Dim Company table in the staging database and then load rows by joining staging_company, staging_industry, and staging StatusType
