@@ -285,65 +285,54 @@ class TPCDI_Loader():
       FROM S_Customer C LEFT OUTER JOIN Copied CP ON (C.CustomerID = CP.CustomerID)
       WHERE C.ActionType = 'NEW'
     """
-    create_temporal_updt_table = """
-      CREATE TABLE UpdCustomer  ( SK_CustomerID  NUMBER(11,0) PRIMARY KEY,
-							CustomerID NUMBER(11,0) NOT NULL,
-							TaxID CHAR(20) NOT NULL,
-							Status CHAR(10) NOT NULL,
-							LastName CHAR(30) NOT NULL,
-							FirstName CHAR(30) NOT NULL,
-							MiddleInitial CHAR(1),
-							Gender CHAR(1),
-							Tier NUMBER(1,0),
-							DOB date NOT NULL,
-							AddressLine1	varchar(80) NOT NULL,
-							AddressLine2	varchar(80),
-							PostalCode	char(12) NOT NULL,
-							City	char(25) NOT NULL,
-							StateProv	char(20) NOT NULL,
-							Country	char(24),
-							Phone1	char(30),
-							Phone2	char(30),
-							Phone3	char(30),
-							Email1	char(50),
-							Email2	char(50),
-							NationalTaxRateDesc	varchar(50),
-							NationalTaxRate	NUMBER(6,5),
-							LocalTaxRateDesc	varchar(50),
-							LocalTaxRate	NUMBER(6,5),
-							AgencyID	char(30),
-							CreditRating NUMBER(5,0),
-							NetWorth	NUMBER(10),
-							MarketingNameplate varchar(100),
-							--IsCurrent CHAR(5) NOT NULL CHECK (IsCurrent = 'true' OR IsCurrent = 'false'),
-                            IsCurrent CHAR(5),
-							BatchID NUMBER(5,0) NOT NULL,
-							EffectiveDate date NOT NULL,
-							EndDate date NOT NULL
-    )
+    # Now we update all fields in the DimCustomer table with the latest values from S_Customer
+    base_update_query = """
+      UPDATE DimCustomer C
+      SET %s = (
+        SELECT MAX(%s)
+        FROM S_Customer C1
+        WHERE C1.CustomerID = C.CustomerID AND
+          C1.ActionType IN ('NEW', 'UPDCUST') AND
+          NOT EXISTS (
+            SELECT * FROM S_Customer C2 
+            WHERE C2.CustomerID = C1.CustomerID 
+            AND C2.ActionType IN ('NEW', 'UPDCUST') AND C2.EffectiveDate > C1.EffectiveDate)
+      )
+      WHERE EXISTS (
+        SELECT * FROM S_Customer C1
+        WHERE C1.CustomerID = C.CustomerID AND
+          C1.ActionType IN ('NEW', 'UPDCUST') AND
+          NOT EXISTS (
+            SELECT * FROM S_Customer C2
+            WHERE C2.CustomerID = C1.CustomerID AND
+              C2.ActionType IN ('NEW', 'UPDCUST') AND C2.EffectiveDate > C1.EffectiveDate)
+      )
     """
-
-    insert_temporal_updt_table = """
-      INSERT INTO UpdCustomer(CustomerID, TaxID, Status, LastName, FirstName, MiddleInitial, Gender, Tier, DOB, AddressLine1, AddressLine2, PostalCode,
-                City, StateProv, Country, Phone1, Phone2, Phone3, Email1, Email2, NationalTaxRateDesc, NationalTaxRate, LocalTaxRateDesc, LocalTaxRate, EffectiveDate, 
-                EndDate, BatchId, AgencyID, CreditRating, NetWorth, MarketingNameplate)
-      WITH Base AS (
-          SELECT * FROM DimCustomer
-          )
-      WITH New AS (
-          SELECT C.CustomerID, C.TaxID, C.Status, C.LastName, C.FirstName, C.MiddleInitial, C.Gender, C.Tier, C.DOB, C.AddressLine1, C.AddressLine2, C.PostalCode,
-              C.City, C.StateProv, C.Country, C.Phone1, C.Phone2, C.Phone3, C.Email1, C.Email2, C.NationalTaxRateDesc, C.NationalTaxRate, C.LocalTaxRateDesc, C.LocalTaxRate, C.EffectiveDate, 
-              C.EndDate, C.BatchId, P.AgencyID, P.CreditRating, P.NetWorth, P.MarketingNameplate
-          FROM Prospect P, S_Customer C
-          WHERE C.ActionType = 'UPDCUST' AND
-            UPPER(P.LastName) = UPPER(C.LastName) AND
-              TRIM(UPPER(P.AddressLine1)) = TRIM(UPPER(C.AddressLine1)) AND
-              TRIM(UPPER(P.AddressLine2)) = TRIM(UPPER(C.AddressLine2)) AND
-              TRIM(UPPER(P.PostalCode)) = TRIM(UPPER(C.PostalCode))
-          )
-      
-
-    """
+    update_query_status = base_update_query % ('C.Status', 'C.Status')
+    update_query_last_name = base_update_query % ('C.LastName', 'C.LastName')
+    update_query_first_name = base_update_query % ('C.FirstName', 'C.FirstName')
+    update_query_middle_initial = base_update_query % ('C.MiddleInitial', 'C.MiddleInitial')
+    update_query_gender = base_update_query % ('C.Gender', 'C.Gender')
+    update_query_tier = base_update_query % ('C.Tier', 'C.Tier')
+    update_query_dob = base_update_query % ('C.DOB', 'C.DOB')
+    update_query_address_line1 = base_update_query % ('C.AddressLine1', 'C.AddressLine1')
+    update_query_address_line2 = base_update_query % ('C.AddressLine2', 'C.AddressLine2')
+    update_query_postal_code = base_update_query % ('C.PostalCode', 'C.PostalCode')
+    update_query_city = base_update_query % ('C.City', 'C.City')
+    update_query_state_prov = base_update_query % ('C.StateProv', 'C.StateProv')
+    update_query_country = base_update_query % ('C.Country', 'C.Country')
+    update_query_phone1 = base_update_query % ('C.Phone1', 'C.Phone1')
+    update_query_phone2 = base_update_query % ('C.Phone2', 'C.Phone2')
+    update_query_phone3 = base_update_query % ('C.Phone3', 'C.Phone3')
+    update_query_email1 = base_update_query % ('C.Email1', 'C.Email1')
+    update_query_email2 = base_update_query % ('C.Email2', 'C.Email2')
+    update_query_national_tax_rate_desc = base_update_query % ('C.NationalTaxRateDesc', 'C.NationalTaxRateDesc')
+    update_query_national_tax_rate = base_update_query % ('C.NationalTaxRate', 'C.NationalTaxRate')
+    update_query_local_tax_rate_desc = base_update_query % ('C.LocalTaxRateDesc', 'C.LocalTaxRateDesc')
+    update_query_local_tax_rate = base_update_query % ('C.LocalTaxRate', 'C.LocalTaxRate')
+    update_query_agency_id = base_update_query % ('C.AgencyID', 'CP.AgencyID')
+    update_query_credit_rating = base_update_query % ('C.CreditRating', 'CP.CreditRating')
+    
 
     print(load_query)
     with oracledb.connect(
