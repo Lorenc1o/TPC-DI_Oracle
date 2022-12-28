@@ -706,7 +706,7 @@ class TPCDI_Loader():
     FROM S_Company C
     JOIN Industry I ON C.INDUSTRY_ID = I.IN_ID
     JOIN StatusType S ON C.STATUS = S.ST_ID
-    WHERE FOUNDING_DATE <> '        ' and LPAD(C.PTS,8) <> '        '
+    WHERE FOUNDING_DATE IS NOT NULL
     """
     create_sdc_dimcompany_query = """
     CREATE TABLE sdc_dimcompany 
