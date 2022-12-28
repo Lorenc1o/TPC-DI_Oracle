@@ -332,7 +332,7 @@ class TPCDI_Loader():
     update_query_local_tax_rate = base_update_query % ('C.LocalTaxRate', 'C.LocalTaxRate')
     update_query_agency_id = base_update_query % ('C.AgencyID', 'CP.AgencyID')
     update_query_credit_rating = base_update_query % ('C.CreditRating', 'CP.CreditRating')
-    
+
 
     print(load_query)
     with oracledb.connect(
@@ -697,101 +697,185 @@ class TPCDI_Loader():
     """
     Create Dim Company table in the staging database and then load rows by joining staging_company, staging_industry, and staging StatusType
     """
-    # Create query to load text data into dim_company table
-    dim_company_load_query="""
-      INSERT INTO DimCompany (CompanyID,Status,Name,Industry,SPrating,isLowGrade,CEO,AddressLine1,AddressLine2,PostalCode,City,StateProv,Country,Description,FoundingDate,IsCurrent,BatchID,EffectiveDate,EndDate)
-      SELECT C.CIK,S.ST_NAME, C.COMPANY_NAME, I.IN_NAME,C.SP_RATING, IF(LEFT(C.SP_RATING,1)='A' OR LEFT (C.SP_RATING,3)='BBB','FALSE','TRUE'),
-            C.CEO_NAME, C.ADDR_LINE_1,C.ADDR_LINE_2, C.POSTAL_CODE, C.CITY, C.STATE_PROVINCE, C.COUNTRY, C.DESCRIPTION,
-            STR_TO_DATE(FOUNDING_DATE,'%Y%m%d'),TRUE, 1, STR_TO_DATE(LEFT(C.PTS,8),'%Y%m%d'), STR_TO_DATE('99991231','%Y%m%d')
-      FROM S_Company C
-      JOIN Industry I ON C.INDUSTRY_ID = I.IN_ID
-      JOIN StatusType S ON C.STATUS = S.ST_ID;
+
+    load_dim_company_query = """
+    INSERT INTO DimCompany (CompanyID, Status,Name,Industry,SPrating,isLowGrade,CEO,AddressLine1,AddressLine2,PostalCode,City,StateProv,Country,Description,FoundingDate,IsCurrent,BatchID,EffectiveDate,EndDate)
+    SELECT C.CIK, S.ST_NAME, C.COMPANY_NAME, I.IN_NAME,C.SP_RATING, 
+        CASE 
+            WHEN LPAD(C.SP_RATING,1)='A' OR LPAD(C.SP_RATING,3)='BBB' THEN
+                'false'
+            ELSE
+                'true'
+            END,
+        C.CEO_NAME, C.ADDR_LINE_1,C.ADDR_LINE_2, C.POSTAL_CODE, C.CITY, C.STATE_PROVINCE, C.COUNTRY, C.DESCRIPTION,
+        TO_DATE(FOUNDING_DATE,'YYYYMMDD'),'true', 1, TO_DATE(LPAD(C.PTS,8),'YYYYMMDD'), TO_DATE('99991231','YYYYMMDD')
+    FROM S_Company C
+    JOIN Industry I ON C.INDUSTRY_ID = I.IN_ID
+    JOIN StatusType S ON C.STATUS = S.ST_ID
+    WHERE FOUNDING_DATE IS NOT NULL
     """
-    
-    # Handle type 2 slowly changing dimension on company
-    dim_company_sdc_query = """
-    CREATE TABLE sdc_dimcompany
-      LIKE DimCompany;
+    create_sdc_dimcompany_query = """
+    CREATE TABLE sdc_dimcompany 
+      (	SK_COMPANYID NUMBER(11,0), 
+      COMPANYID NUMBER(11,0) NOT NULL, 
+      STATUS CHAR(10) NOT NULL, 
+      NAME CHAR(60) NOT NULL, 
+      INDUSTRY CHAR(50) NOT NULL, 
+      SPRATING CHAR(4), 
+      ISLOWGRADE CHAR(5) NOT NULL, 
+      CEO CHAR(100) NOT NULL, 
+      ADDRESSLINE1 CHAR(80), 
+      ADDRESSLINE2 CHAR(80), 
+      POSTALCODE CHAR(12) NOT NULL, 
+      CITY CHAR(25) NOT NULL, 
+      STATEPROV CHAR(20) NOT NULL, 
+      COUNTRY CHAR(24), 
+      DESCRIPTION CHAR(150) NOT NULL, 
+      FOUNDINGDATE DATE, 
+      ISCURRENT CHAR(5) NOT NULL, 
+      BATCHID NUMBER(5,0) NOT NULL, 
+      EFFECTIVEDATE DATE NOT NULL, 
+      ENDDATE DATE NOT NULL, 
+      CHECK (isLowGrade = 'true' OR isLowGrade = 'false') ENABLE, 
+      CHECK (IsCurrent = 'true' OR IsCurrent = 'false') ENABLE, 
+      PRIMARY KEY ("SK_COMPANYID"))
+    """
+    alter_sdc_dimcompany_query = """
     ALTER TABLE sdc_dimcompany
-      ADD COLUMN RN NUMERIC;
-    INSERT INTO sdc_dimcompany
-    SELECT *, ROW_NUMBER() OVER(ORDER BY CompanyID, EffectiveDate) RN
-    FROM DimCompany;
-
-    WITH candidate AS (
-    SELECT s1.SK_CompanyID,
-          s2.EffectiveDate EndDate
-    FROM sdc_dimcompany s1
-          JOIN sdc_dimcompany s2 ON (s1.RN = (s2.RN - 1) AND s1.CompanyID = s2.CompanyID))
-    UPDATE DimCompany,candidate SET DimCompany.EndDate = candidate.EndDate, DimCompany.IsCurrent=FALSE WHERE DimCompany.SK_CompanyID = candidate.SK_CompanyID;
-    DROP TABLE sdc_dimcompany;
+        ADD RN DECIMAL
     """
-
-    # Construct mysql client bash command to execute ddl and data loading query
-    # dim_company_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+dim_company_ddl+"\""
-    # dim_company_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+dim_company_load_query+"\""
-    # dim_company_sdc_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+dim_company_sdc_query+"\""
-
-    # Execute the command
-    os.system(dim_company_ddl_cmd)
-    os.system(dim_company_load_cmd)    
-    os.system(dim_company_sdc_cmd)
+    fill_sdc_dimcompany_query = """
+    INSERT INTO sdc_dimcompany
+    SELECT DC.*, ROW_NUMBER() OVER(ORDER BY CompanyID, EffectiveDate) RN
+    FROM DimCompany DC
+    """
+    update_sdc_dimcompany_query = """
+    UPDATE DimCompany 
+    SET DimCompany.EndDate = 
+        (SELECT EndDate FROM ( 
+            SELECT s1.SK_CompanyID,
+                    s2.EffectiveDate EndDate
+            FROM sdc_dimcompany s1
+            JOIN sdc_dimcompany s2 ON (s1.RN = (s2.RN - 1) AND s1.CompanyID = s2.CompanyID)
+            WHERE s1.SK_CompanyID = DimCompany.SK_CompanyID)),
+        DimCompany.IsCurrent = 
+        (SELECT 'false' FROM ( 
+            SELECT *
+            FROM sdc_dimcompany s1
+            JOIN sdc_dimcompany s2 ON (s1.RN = (s2.RN - 1) AND s1.CompanyID = s2.CompanyID)
+            WHERE s1.SK_CompanyID = DimCompany.SK_CompanyID))
+    WHERE EXISTS ( 
+            SELECT *
+            FROM sdc_dimcompany s1
+            JOIN sdc_dimcompany s2 ON (s1.RN = (s2.RN - 1) AND s1.CompanyID = s2.CompanyID)
+            WHERE s1.SK_CompanyID = DimCompany.SK_CompanyID)
+    """
+    drop_sdc_dimcompany_query = """
+    DROP TABLE sdc_dimcompany
+    """
+    with oracledb.connect(
+      user=self.oracle_user, password=self.oracle_pwd, 
+      dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+      with connection.cursor() as cursor:
+        cursor.execute(load_dim_company_query)
+        cursor.execute(create_sdc_dimcompany_query)
+        cursor.execute(alter_sdc_dimcompany_query)
+        cursor.execute(fill_sdc_dimcompany_query)
+        cursor.execute(update_sdc_dimcompany_query)
+        cursor.execute(drop_sdc_dimcompany_query)
+      connection.commit()
   
   def load_target_dim_security(self):
     """
-    Create Security table in the staging database and then load rows by ..
+    Create Security table in the staging database and then load rows by joining staging_security, status_type and dim_company
     """
-    # Create query to load text data into security table
-    security_load_query="""
+    load_dim_security_query_1 = """
     INSERT INTO DimSecurity (Symbol,Issue,Status,Name,ExchangeID,SK_CompanyID,SharesOutstanding,FirstTrade,FirstTradeOnExchange,Dividend,IsCurrent,BatchID,EffectiveDate,EndDate)
-    SELECT SS.SYMBOL,SS.ISSUE_TYPE, ST.ST_NAME, SS.NAME, SS.EX_ID, DC.SK_CompanyID, SS.SH_OUT, STR_TO_DATE(SS.FIRST_TRADE_DATE,'%Y%m%d'),
-          STR_TO_DATE(FIRST_TRADE_EXCHANGE, '%Y%m%d'), SS.DIVIDEN, TRUE, 1, STR_TO_DATE(LEFT(SS.PTS,8),'%Y%m%d'), STR_TO_DATE('99991231','%Y%m%d')
+    SELECT SS.SYMBOL,SS.ISSUE_TYPE, ST.ST_NAME, SS.NAME, SS.EX_ID, DC.SK_CompanyID, SS.SH_OUT, TO_DATE(SS.FIRST_TRADE_DATE,'YYYY-MM-DD'),
+          TO_DATE(FIRST_TRADE_EXCHANGE, 'YYYY-MM-DD'), SS.DIVIDEN, 'true', 1, TO_DATE(LPAD(SS.PTS,8),'YYYY-MM-DD'), TO_DATE('99991231','YYYY-MM-DD')
     FROM S_Security SS
     JOIN StatusType ST ON SS.STATUS = ST.ST_ID
-    JOIN DimCompany DC ON DC.SK_CompanyID = convert(SS.COMPANY_NAME_OR_CIK, SIGNED)
-                        AND DC.EffectiveDate <= STR_TO_DATE(LEFT(SS.PTS,8),'%Y%m%d')
-                        AND STR_TO_DATE(LEFT(SS.PTS,8),'%Y%m%d') < DC.EndDate
-                        AND LEFT(SS.COMPANY_NAME_OR_CIK,1)='0';
+    JOIN DimCompany DC ON DC.SK_CompanyID = CAST(SS.COMPANY_NAME_OR_CIK AS INTEGER)
+                        AND DC.EffectiveDate <= TO_DATE(LPAD(SS.PTS,8),'YYYY-MM-DD')
+                        AND TO_DATE(LPAD(SS.PTS,8),'YYYY-MM-DD') < DC.EndDate
+                        AND LPAD(SS.COMPANY_NAME_OR_CIK,1)='0'
+    """
 
+    load_dim_security_query_2 = """                    
     INSERT INTO DimSecurity (Symbol,Issue,Status,Name,ExchangeID,SK_CompanyID,SharesOutstanding,FirstTrade,FirstTradeOnExchange,Dividend,IsCurrent,BatchID,EffectiveDate,EndDate)
-    SELECT SS.SYMBOL,SS.ISSUE_TYPE, ST.ST_NAME, SS.NAME, SS.EX_ID, DC.SK_CompanyID, SS.SH_OUT, STR_TO_DATE(SS.FIRST_TRADE_DATE,'%Y%m%d'),
-          STR_TO_DATE(FIRST_TRADE_EXCHANGE, '%Y%m%d'), SS.DIVIDEN, TRUE, 1, STR_TO_DATE(LEFT(SS.PTS,8),'%Y%m%d'), STR_TO_DATE('99991231','%Y%m%d')
+    SELECT SS.SYMBOL,SS.ISSUE_TYPE, ST.ST_NAME, SS.NAME, SS.EX_ID, DC.SK_CompanyID, SS.SH_OUT, TO_DATE(SS.FIRST_TRADE_DATE,'YYYY-MM-DD'),
+          TO_DATE(FIRST_TRADE_EXCHANGE, 'YYYY-MM-DD'), SS.DIVIDEN, 'true', 1, TO_DATE(LPAD(SS.PTS,8),'YYYY-MM-DD'), TO_DATE('99991231','YYYY-MM-DD')
     FROM S_Security SS
     JOIN StatusType ST ON SS.STATUS = ST.ST_ID
     JOIN DimCompany DC ON RTRIM(SS.COMPANY_NAME_OR_CIK) = DC.Name
-                        AND DC.EffectiveDate <= STR_TO_DATE(LEFT(SS.PTS,8),'%Y%m%d')
-                        AND STR_TO_DATE(LEFT(SS.PTS,8),'%Y%m%d') < DC.EndDate
-                        AND LEFT(SS.COMPANY_NAME_OR_CIK,1) <> '0';
+                        AND DC.EffectiveDate <= TO_DATE(LPAD(SS.PTS,8),'YYYY-MM-DD')
+                        AND TO_DATE(LPAD(SS.PTS,8),'YYYY-MM-DD') < DC.EndDate
+                        AND LPAD(SS.COMPANY_NAME_OR_CIK,1) <> '0'
     """
-
-    dim_security_scd = """
+    create_sdc_dimsecurity_query = """                        
     CREATE TABLE sdc_dimsecurity
-      LIKE DimSecurity;
-    ALTER TABLE sdc_dimsecurity
-      ADD COLUMN RN NUMERIC;
-    INSERT INTO sdc_dimsecurity
-    SELECT *, ROW_NUMBER() OVER(ORDER BY Symbol, EffectiveDate) RN
-    FROM DimSecurity;
-
-    WITH candidate AS (SELECT s1.SK_SecurityID, s2.EffectiveDate EndDate
-                      FROM sdc_dimsecurity s1
-                              JOIN sdc_dimsecurity s2 ON (s1.RN = (s2.RN - 1) AND s1.Symbol = s2.Symbol))
-    UPDATE DimSecurity, candidate
-    SET DimSecurity.EndDate   = candidate.EndDate,
-        DimSecurity.IsCurrent = FALSE
-    WHERE DimSecurity.SK_SecurityID = candidate.SK_SecurityID;
-    DROP TABLE sdc_dimsecurity;
+      (	SK_SECURITYID NUMBER(11,0), 
+      SYMBOL CHAR(15) NOT NULL, 
+      ISSUE CHAR(6) NOT NULL, 
+      STATUS CHAR(10) NOT NULL, 
+      NAME CHAR(70) NOT NULL, 
+      EXCHANGEID CHAR(6) NOT NULL, 
+      SK_COMPANYID NUMBER(11,0) NOT NULL, 
+      SHARESOUTSTANDING NUMBER(12,0) NOT NULL, 
+      FIRSTTRADE DATE NOT NULL, 
+      FIRSTTRADEONEXCHANGE DATE NOT NULL, 
+      DIVIDEND NUMBER(10,2) NOT NULL, 
+      ISCURRENT CHAR(5) NOT NULL, 
+      BATCHID NUMBER(5,0) NOT NULL, 
+      EFFECTIVEDATE DATE NOT NULL, 
+      ENDDATE DATE NOT NULL, 
+      CHECK (IsCurrent = 'false' or IsCurrent = 'true') ENABLE, 
+      PRIMARY KEY ("SK_SECURITYID"))
     """
-    
-    # Construct mysql client bash command to execute ddl and data loading query
-    # dim_security_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+security_ddl+"\""
-    # dim_security_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+security_load_query+"\""
-    # dim_security_scd_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+dim_security_scd+"\""
-
-    # Execute the command
-    os.system(dim_security_ddl_cmd)
-    os.system(dim_security_load_cmd)
-    os.system(dim_security_scd_cmd)
+    alter_sdc_dimsecurity_query = """        
+    ALTER TABLE sdc_dimsecurity
+      ADD RN DECIMAL
+    """
+    fill_sdc_dimsecurity_query = """
+    INSERT INTO sdc_dimsecurity
+    SELECT DS.*, ROW_NUMBER() OVER(ORDER BY Symbol, EffectiveDate) RN
+    FROM DimSecurity DS
+    """
+    update_sdc_dimsecurity_query = """
+    UPDATE DimSecurity
+    SET DimSecurity.EndDate = 
+        (SELECT EndDate FROM (
+            SELECT s1.SK_SecurityID, s2.EffectiveDate EndDate
+            FROM sdc_dimsecurity s1
+            JOIN sdc_dimsecurity s2 ON (s1.RN = (s2.RN - 1) AND s1.Symbol = s2.Symbol)
+            WHERE s1.SK_SecurityID = DimSecurity.SK_SecurityID)),
+        DimSecurity.IsCurrent = 
+        (SELECT 'false' FROM (
+            SELECT s1.SK_SecurityID, s2.EffectiveDate EndDate
+            FROM sdc_dimsecurity s1
+            JOIN sdc_dimsecurity s2 ON (s1.RN = (s2.RN - 1) AND s1.Symbol = s2.Symbol)
+            WHERE s1.SK_SecurityID = DimSecurity.SK_SecurityID))
+        WHERE EXISTS (SELECT * FROM (
+            SELECT s1.SK_SecurityID, s2.EffectiveDate EndDate
+            FROM sdc_dimsecurity s1
+            JOIN sdc_dimsecurity s2 ON (s1.RN = (s2.RN - 1) AND s1.Symbol = s2.Symbol)
+            WHERE s1.SK_SecurityID = DimSecurity.SK_SecurityID))
+    """
+    drop_sdc_dimsecurity_query = """            
+    DROP TABLE sdc_dimsecurity
+    """
+    with oracledb.connect(
+      user=self.oracle_user, password=self.oracle_pwd, 
+      dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+      with connection.cursor() as cursor:
+        cursor.execute(load_dim_security_query_1)
+        cursor.execute(load_dim_security_query_2)
+        cursor.execute(create_sdc_dimsecurity_query)
+        cursor.execute(alter_sdc_dimsecurity_query)
+        cursor.execute(fill_sdc_dimsecurity_query)
+        cursor.execute(update_sdc_dimsecurity_query)
+        cursor.execute(drop_sdc_dimsecurity_query)
+      connection.commit()
 
   def load_target_financial(self):
     """
