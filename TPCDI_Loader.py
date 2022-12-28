@@ -106,73 +106,144 @@ class TPCDI_Loader():
     cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/TradeType.ctl', self.batch_dir + 'TradeType.txt')
     os.system(cmd)
         
-  def load_customer(self):
+  def load_staging_customer(self):
     customer_inserts = []
     with open(self.batch_dir + '/CustomerMgmt.xml') as fd:
       doc = xmltodict.parse(fd.read())
       actions = doc['TPCDI:Actions']['TPCDI:Action']
       for action in actions:
         action_type = action['@ActionType']
-        match action_type:
-          case 'NEW':
-            c_id = action['Customer']['@C_ID']
-            c_tax_id = action['Customer']['@C_TAX_ID']
-            c_l_name = action['Customer']['Name']['C_L_NAME']
-            c_f_name = action['Customer']['Name']['C_F_NAME']
-            c_m_name = action['Customer']['Name']['C_M_NAME']
+        try:
+          c_id = action['Customer']['@C_ID']
+        except:
+          c_id = None
+        try:
+          c_tax_id = action['Customer']['@C_TAX_ID']
+        except:
+          c_tax_id = None
+        try:
+          c_l_name = action['Customer']['Name']['C_L_NAME']
+        except:
+          c_l_name = None
+        try:
+          c_f_name = action['Customer']['Name']['C_F_NAME']
+        except:
+          c_f_name = None
+        try:
+          c_m_name = action['Customer']['Name']['C_M_NAME']
+        except:
+          c_m_name = None
+        try:
+          c_tier = action['Customer']['@C_TIER']
+          if c_tier == '':
             c_tier = 0
-            if('@C_TIER' in action['Customer']):
-              c_tier = action['Customer']['@C_TIER']
-            c_dob = action['Customer']['@C_DOB']
-            c_prim_email = action['Customer']['ContactInfo']['C_PRIM_EMAIL']
-            c_alt_email = action['Customer']['ContactInfo']['C_ALT_EMAIL']
-            c_gndr = 'U'
-            if('@C_GNDR' in action['Customer']):
-              c_gndr = action['Customer']['@C_GNDR'].upper()
-            if c_gndr != 'M' and c_gndr != 'F':
-              c_gndr = 'U'
-            c_adline1 = action['Customer']['Address']['C_ADLINE1']
-            c_adline2 = action['Customer']['Address']['C_ADLINE2']
-            c_zipcode = action['Customer']['Address']['C_ZIPCODE']
-            c_city = action['Customer']['Address']['C_CITY']
-            c_state_prov = action['Customer']['Address']['C_STATE_PROV']
-            c_ctry = action['Customer']['Address']['C_CTRY']
-            c_status = 'ACTIVE'
-            phones = []
-            phones.append(action['Customer']['ContactInfo']['C_PHONE_1'])
-            phones.append(action['Customer']['ContactInfo']['C_PHONE_2'])
-            phones.append(action['Customer']['ContactInfo']['C_PHONE_3'])
-            phone_numbers = []
-            for phone in phones:
-              c_ctry_code = phone['C_CTRY_CODE']
-              c_area_code = phone['C_AREA_CODE']
-              c_local = phone['C_LOCAL']
-              phone_number = None
-              if c_ctry_code is not None and c_area_code is not None and c_local is not None:
-                phone_number = '+' + c_ctry_code + '(' + c_area_code + ')' + c_local
-              elif c_ctry_code is None and c_area_code is not None and c_local is not None:
-                phone_number = '(' + c_area_code + ')' + c_local
-              elif c_ctry_code is None and c_area_code is None and c_local is not None:
-                phone_number = c_local
-              if phone_number is not None and phone['C_EXT'] is not None:
-                phone_number = phone_number + phone['C_EXT']
-              phone_numbers.append(phone_number)
-              c_nat_tx_id = action['Customer']['TaxInfo']['C_NAT_TX_ID']
-              c_lcl_tx_id = action['Customer']['TaxInfo']['C_LCL_TX_ID']
-              action_ts_date = action['@ActionTS'][0:10]
-            insert = f"""
-            INSERT INTO DimCustomer(CustomerID, TaxID, Status, LastName, FirstName, MiddleInitial, Gender, Tier, DOB, AddressLine1, AddressLine2, PostalCode,
-              City, StateProv, Country, Phone1, Phone2, Phone3, Email1, Email2, NationalTaxRateDesc, NationalTaxRate, LocalTaxRateDesc, LocalTaxRate, EffectiveDate, EndDate, BatchId)
-            VALUES ({c_id}, '{char_insert(c_tax_id)}', '{char_insert(c_status)}', '{char_insert(c_l_name)}', '{char_insert(c_f_name)}', '{char_insert(c_m_name)}', 
-              '{char_insert(c_gndr)}', {c_tier}, TO_DATE('{c_dob}', 'yyyy-mm-dd'), '{char_insert(c_adline1)}', '{char_insert(c_adline2)}', '{char_insert(c_zipcode)}', 
-              '{char_insert(c_city)}', '{char_insert(c_state_prov)}', '{char_insert(c_ctry)}', '{char_insert(phone_numbers[0])}', '{char_insert(phone_numbers[1])}', 
-              '{char_insert(phone_numbers[2])}', '{char_insert(c_prim_email)}', '{char_insert(c_alt_email)}', 
-              (SELECT TX_NAME FROM TaxRate WHERE TX_ID = '{c_nat_tx_id}'), (SELECT TX_RATE FROM TaxRate WHERE TX_ID = '{c_nat_tx_id}'),
-              (SELECT TX_NAME FROM TaxRate WHERE TX_ID = '{c_lcl_tx_id}'), (SELECT TX_RATE FROM TaxRate WHERE TX_ID = '{c_lcl_tx_id}'),
-              TO_DATE('{action_ts_date}', 'yyyy-mm-dd'), TO_DATE('9999-12-31', 'yyyy-mm-dd'), {self.batch_number})
-            """
-            print(insert)
-            customer_inserts.append(insert)
+        except:
+          c_tier = 0
+        try:
+          c_dob = action['Customer']['@C_DOB']
+        except:
+          c_dob = None
+        try:
+          c_prim_email = action['Customer']['ContactInfo']['C_PRIM_EMAIL']
+        except:
+          c_prim_email = None
+        try:
+          c_alt_email = action['Customer']['ContactInfo']['C_ALT_EMAIL']
+        except:
+          c_alt_email = None
+        try:
+          c_gndr = action['Customer']['@C_GNDR'].upper()
+        except:
+          c_gndr = 'U'
+        if c_gndr != 'M' and c_gndr != 'F':
+          c_gndr = 'U'
+        try:
+          c_adline1 = action['Customer']['Address']['C_ADLINE1']
+        except:
+          c_adline1 = None
+        try:
+          c_adline2 = action['Customer']['Address']['C_ADLINE2']
+        except:
+          c_adline2 = None
+        try:
+          c_zipcode = action['Customer']['Address']['C_ZIPCODE']
+        except:
+          c_zipcode = None
+        try:
+          c_city = action['Customer']['Address']['C_CITY']
+        except:
+          c_city = None
+        try:
+          c_state_prov = action['Customer']['Address']['C_STATE_PROV']
+        except:
+          c_state_prov = None
+        try:
+          c_ctry = action['Customer']['Address']['C_CTRY']
+        except:
+          c_ctry = None
+        c_status = 'ACTIVE'
+        phones = []
+        try:
+          phones.append(action['Customer']['ContactInfo']['C_PHONE_1'])
+        except:
+          phones.append(None)
+        try:
+          phones.append(action['Customer']['ContactInfo']['C_PHONE_2'])
+        except:
+          phones.append(None)
+        try:
+          phones.append(action['Customer']['ContactInfo']['C_PHONE_3'])
+        except:
+          phones.append(None)
+        phone_numbers = []
+        for phone in phones:
+          try:
+            c_ctry_code = phone['C_CTRY_CODE']
+          except:
+            c_ctry_code = None
+          try:
+            c_area_code = phone['C_AREA_CODE']
+          except:
+            c_area_code = None
+          try:
+            c_local = phone['C_LOCAL']
+          except:
+            c_local = None
+          phone_number = None
+          if c_ctry_code is not None and c_area_code is not None and c_local is not None:
+            phone_number = '+' + c_ctry_code + '(' + c_area_code + ')' + c_local
+          elif c_ctry_code is None and c_area_code is not None and c_local is not None:
+            phone_number = '(' + c_area_code + ')' + c_local
+          elif c_ctry_code is None and c_area_code is None and c_local is not None:
+            phone_number = c_local
+          if phone_number is not None and phone['C_EXT'] is not None:
+            phone_number = phone_number + phone['C_EXT']
+          phone_numbers.append(phone_number)
+          try:
+            c_nat_tx_id = action['Customer']['TaxInfo']['C_NAT_TX_ID']
+          except:
+            c_nat_tx_id = None
+          try:
+            c_lcl_tx_id = action['Customer']['TaxInfo']['C_LCL_TX_ID']
+          except:
+            c_lcl_tx_id = None
+          try:
+            action_ts_date = action['@ActionTS'][0:10]
+          except:
+            action_ts_date = None
+        insert = f"""
+        INSERT INTO S_Customer (ActionType, CustomerID, TaxID, Status, LastName, FirstName, MiddleInitial, Gender, Tier, DOB, AddressLine1, AddressLine2, PostalCode,
+          City, StateProv, Country, Phone1, Phone2, Phone3, Email1, Email2, NationalTaxRateDesc, NationalTaxRate, LocalTaxRateDesc, LocalTaxRate, EffectiveDate, EndDate, BatchId)
+        VALUES ('{char_insert(action_type)}', {c_id}, '{char_insert(c_tax_id)}', '{char_insert(c_status)}', '{char_insert(c_l_name)}', '{char_insert(c_f_name)}', '{char_insert(c_m_name)}', 
+          '{char_insert(c_gndr)}', {c_tier}, TO_DATE('{char_insert(c_dob)}', 'yyyy-mm-dd'), '{char_insert(c_adline1)}', '{char_insert(c_adline2)}', '{char_insert(c_zipcode)}', 
+          '{char_insert(c_city)}', '{char_insert(c_state_prov)}', '{char_insert(c_ctry)}', '{char_insert(phone_numbers[0])}', '{char_insert(phone_numbers[1])}', 
+          '{char_insert(phone_numbers[2])}', '{char_insert(c_prim_email)}', '{char_insert(c_alt_email)}', 
+          (SELECT TX_NAME FROM TaxRate WHERE TX_ID = '{char_insert(c_nat_tx_id)}'), (SELECT TX_RATE FROM TaxRate WHERE TX_ID = '{char_insert(c_nat_tx_id)}'),
+          (SELECT TX_NAME FROM TaxRate WHERE TX_ID = '{char_insert(c_lcl_tx_id)}'), (SELECT TX_RATE FROM TaxRate WHERE TX_ID = '{char_insert(c_lcl_tx_id)}'),
+          TO_DATE('{char_insert(action_ts_date)}', 'yyyy-mm-dd'), TO_DATE('9999-12-31', 'yyyy-mm-dd'), {self.batch_number})
+        """
+        print(insert)
+        customer_inserts.append(insert)
 
     with oracledb.connect(
       user=self.oracle_user, password=self.oracle_pwd, 
@@ -183,6 +254,47 @@ class TPCDI_Loader():
         connection.commit()
     print(f'Total actions: {len(actions)}')
     print(f'Inserted {len(customer_inserts)} rows')
+
+  
+  def load_new_customer(self):
+    """
+    Load NEW customers into DimCustomer table
+    """
+    load_query = """
+      INSERT INTO DimCustomer(CustomerID, TaxID, Status, LastName, FirstName, MiddleInitial, Gender, Tier, DOB, AddressLine1, AddressLine2, PostalCode,
+                City, StateProv, Country, Phone1, Phone2, Phone3, Email1, Email2, NationalTaxRateDesc, NationalTaxRate, LocalTaxRateDesc, LocalTaxRate, EffectiveDate, 
+                EndDate, BatchId, AgencyID, CreditRating, NetWorth, MarketingNameplate)
+      WITH Copied AS (
+          SELECT C.CustomerID, C.TaxID, C.Status, C.LastName, C.FirstName, C.MiddleInitial, C.Gender, C.Tier, C.DOB, C.AddressLine1, C.AddressLine2, C.PostalCode,
+              C.City, C.StateProv, C.Country, C.Phone1, C.Phone2, C.Phone3, C.Email1, C.Email2, C.NationalTaxRateDesc, C.NationalTaxRate, C.LocalTaxRateDesc, C.LocalTaxRate, C.EffectiveDate, 
+              C.EndDate, C.BatchId, P.AgencyID, P.CreditRating, P.NetWorth, P.MarketingNameplate
+          FROM Prospect P, S_Customer C
+          WHERE C.ActionType = 'NEW' AND
+              P.FirstName = C.FirstName AND 
+              UPPER(P.LastName) = UPPER(C.LastName) AND
+              TRIM(UPPER(P.AddressLine1)) = TRIM(UPPER(C.AddressLine1)) AND
+              TRIM(UPPER(P.AddressLine2)) = TRIM(UPPER(C.AddressLine2)) AND
+              TRIM(UPPER(P.PostalCode)) = TRIM(UPPER(C.PostalCode)) AND
+              NOT EXISTS (SELECT * 
+                  FROM S_Customer C1 
+                  WHERE C.CustomerID = C1.CustomerID AND
+                      (C1.ActionType = 'UPDCUST' OR C1.ActionType = 'INACT') AND
+                      C1.EffectiveDate > C.EffectiveDate
+              )
+      )
+      SELECT C.CustomerID, C.TaxID, C.Status, C.LastName, C.FirstName, C.MiddleInitial, C.Gender, C.Tier, C.DOB, C.AddressLine1, C.AddressLine2, C.PostalCode,
+              C.City, C.StateProv, C.Country, C.Phone1, C.Phone2, C.Phone3, C.Email1, C.Email2, C.NationalTaxRateDesc, C.NationalTaxRate, C.LocalTaxRateDesc, C.LocalTaxRate, C.EffectiveDate, 
+              C.EndDate, C.BatchId, CP.AgencyID, CP.CreditRating, CP.NetWorth, CP.MarketingNameplate
+      FROM S_Customer C LEFT OUTER JOIN Copied CP ON (C.CustomerID = CP.CustomerID)
+      WHERE C.ActionType = 'NEW'
+    """
+    print(load_query)
+    with oracledb.connect(
+      user=self.oracle_user, password=self.oracle_pwd, 
+      dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+      with connection.cursor() as cursor:
+        cursor.execute(load_query)
+      connection.commit()
             
   
   def load_staging_broker(self):
