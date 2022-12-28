@@ -33,21 +33,11 @@ class CSV_Transformer(Transformer):
     def inverse_transform(self, transformed):
         return self.delimiter.join(transformed)
 
-def prepare_char_insertion(field):
-    if field is None:
-        return "''"
-    if field is "''":
-        return field
-    field = field.replace("'", "''")
-    field = field.replace('"', '\\"')
-    return f"'{field}'"
-
-def prepare_numeric_insertion(numeric):
-    try:
-        int(numeric)
-        return numeric
-    except:
-        return "''"
+def char_insert(value):
+    if value is None:
+        return ''
+    value = value.replace("'", "''")
+    return value
 
 def external_sort(input_file, transformer, col_idx, max_chunk_size=50):
     """
