@@ -772,7 +772,13 @@ class TPCDI_Loader():
       user=self.oracle_user, password=self.oracle_pwd, 
       dsn=self.oracle_host+'/'+self.oracle_db) as connection:
       with connection.cursor() as cursor:
-        cursor.execute(load_dim_security_query)
+        cursor.execute(load_dim_security_query_1)
+        cursor.execute(load_dim_security_query_2)
+        cursor.execute(create_sdc_dimsecurity_query)
+        cursor.execute(alter_sdc_dimsecurity_query)
+        cursor.execute(fill_sdc_dimsecurity_query)
+        cursor.execute(update_sdc_dimsecurity_query)
+        cursor.execute(drop_sdc_dimsecurity_query)
       connection.commit()
 
   def load_target_financial(self):
