@@ -52,7 +52,7 @@ if __name__ == "__main__":
             # loader.load_staging_finwire()
             # loader.load_staging_prospect()
             # loader.load_staging_broker()
-            loader.load_customer()
+            loader.load_staging_customer()
             # loader.load_staging_cash_balances()
             # loader.load_staging_watches()
         

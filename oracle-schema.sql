@@ -396,6 +396,36 @@ CREATE TABLE S_Broker(
     EmployeeOffice CHAR(10),
     EmployeePhone CHAR(14)
 );
+
+CREATE TABLE S_Customer  (  ActionType CHAR(10),
+                            CustomerID NUMBER(11,0),
+							TaxID CHAR(20),
+							Status CHAR(10),
+							LastName CHAR(30),
+							FirstName CHAR(30),
+							MiddleInitial CHAR(1),
+							Gender CHAR(1),
+							Tier NUMBER(1,0),
+							DOB date,
+							AddressLine1	varchar(80),
+							AddressLine2	varchar(80),
+							PostalCode	char(12),
+							City	char(25),
+							StateProv	char(20),
+							Country	char(24),
+							Phone1	char(30),
+							Phone2	char(30),
+							Phone3	char(30),
+							Email1	char(50),
+							Email2	char(50),
+							NationalTaxRateDesc	varchar(50),
+							NationalTaxRate	NUMBER(6,5),
+							LocalTaxRateDesc	varchar(50),
+							LocalTaxRate	NUMBER(6,5),
+							BatchID NUMBER(5,0),
+							EffectiveDate date,
+							EndDate date
+);
 -- CREATE INDEX PIndex ON dimtrade (tradeid);
 -- CREATE TABLE dimtradeforexperiment
 -- (
