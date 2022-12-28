@@ -253,6 +253,47 @@ class TPCDI_Loader():
         connection.commit()
     print(f'Total actions: {len(actions)}')
     print(f'Inserted {len(customer_inserts)} rows')
+
+  
+  def load_new_customer(self):
+    """
+    Load NEW customers into DimCustomer table
+    """
+    load_query = """
+      INSERT INTO DimCustomer(CustomerID, TaxID, Status, LastName, FirstName, MiddleInitial, Gender, Tier, DOB, AddressLine1, AddressLine2, PostalCode,
+                City, StateProv, Country, Phone1, Phone2, Phone3, Email1, Email2, NationalTaxRateDesc, NationalTaxRate, LocalTaxRateDesc, LocalTaxRate, EffectiveDate, 
+                EndDate, BatchId, AgencyID, CreditRating, NetWorth, MarketingNameplate)
+      WITH Copied AS (
+          SELECT C.CustomerID, C.TaxID, C.Status, C.LastName, C.FirstName, C.MiddleInitial, C.Gender, C.Tier, C.DOB, C.AddressLine1, C.AddressLine2, C.PostalCode,
+              C.City, C.StateProv, C.Country, C.Phone1, C.Phone2, C.Phone3, C.Email1, C.Email2, C.NationalTaxRateDesc, C.NationalTaxRate, C.LocalTaxRateDesc, C.LocalTaxRate, C.EffectiveDate, 
+              C.EndDate, C.BatchId, P.AgencyID, P.CreditRating, P.NetWorth, P.MarketingNameplate
+          FROM Prospect P, S_Customer C
+          WHERE C.ActionType = 'NEW' AND
+              P.FirstName = C.FirstName AND 
+              UPPER(P.LastName) = UPPER(C.LastName) AND
+              TRIM(UPPER(P.AddressLine1)) = TRIM(UPPER(C.AddressLine1)) AND
+              TRIM(UPPER(P.AddressLine2)) = TRIM(UPPER(C.AddressLine2)) AND
+              TRIM(UPPER(P.PostalCode)) = TRIM(UPPER(C.PostalCode)) AND
+              NOT EXISTS (SELECT * 
+                  FROM S_Customer C1 
+                  WHERE C.CustomerID = C1.CustomerID AND
+                      (C1.ActionType = 'UPDCUST' OR C1.ActionType = 'INACT') AND
+                      C1.EffectiveDate > C.EffectiveDate
+              )
+      )
+      SELECT C.CustomerID, C.TaxID, C.Status, C.LastName, C.FirstName, C.MiddleInitial, C.Gender, C.Tier, C.DOB, C.AddressLine1, C.AddressLine2, C.PostalCode,
+              C.City, C.StateProv, C.Country, C.Phone1, C.Phone2, C.Phone3, C.Email1, C.Email2, C.NationalTaxRateDesc, C.NationalTaxRate, C.LocalTaxRateDesc, C.LocalTaxRate, C.EffectiveDate, 
+              C.EndDate, C.BatchId, CP.AgencyID, CP.CreditRating, CP.NetWorth, CP.MarketingNameplate
+      FROM S_Customer C LEFT OUTER JOIN Copied CP ON (C.CustomerID = CP.CustomerID)
+      WHERE C.ActionType = 'NEW'
+    """
+    print(load_query)
+    with oracledb.connect(
+      user=self.oracle_user, password=self.oracle_pwd, 
+      dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+      with connection.cursor() as cursor:
+        cursor.execute(load_query)
+      connection.commit()
             
   
   def load_staging_broker(self):
