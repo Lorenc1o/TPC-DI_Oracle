@@ -540,15 +540,61 @@ class TPCDI_Loader():
               query += "ADDR_LINE_2,POSTAL_CODE,CITY,STATE_PROVINCE,COUNTRY,CEO_NAME,DESCRIPTION) "
               query += "VALUES ('%s','%s'," % (pts, rec_type)
 
-              """s_company_values.append(
-                "%s (PTS,REC_TYPE,COMPANY_NAME,CIK,STATUS,INDUSTRY_ID,SP_RATING,FOUNDING_DATE,ADDR_LINE_1,"
-                "ADDR_LINE_2,POSTAL_CODE,CITY,STATE_PROVINCE,COUNTRY,CEO_NAME,DESCRIPTION) "
-                "VALUES ('%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s')"
-                %(
-                  s_company_base_query,
-                  pts,rec_type,company_name,cik,status,industry_id,sp_rating,founding_date,addr_line_1,
-                  addr_line_2,postal_code,city,state_province,country,ceo_name,description
-                ))
+              query = "%s (PTS,REC_TYPE,COMPANY_NAME,CIK,STATUS,INDUSTRY_ID,SP_RATING,FOUNDING_DATE,ADDR_LINE_1," % s_company_base_query
+              query += "ADDR_LINE_2,POSTAL_CODE,CITY,STATE_PROVINCE,COUNTRY,CEO_NAME,DESCRIPTION) "
+              query += "VALUES ('%s','%s'," % (pts, rec_type)
+              
+              # now we add all the values which are not "NULL"
+              if company_name != "NULL":
+                query += "'%s'," % company_name
+              else:
+                query += "NULL,"
+              query += "'%s'," % cik
+              query += "'%s'," % status
+              query += "'%s'," % industry_id
+              if sp_rating != "NULL":
+                query += "'%s'," % sp_rating
+              else:
+                query += "NULL,"
+              if founding_date != "NULL":
+                query += "'%s'," % founding_date
+              else:
+                query += "NULL,"
+              if addr_line_1 != "NULL":
+                query += "'%s'," % addr_line_1
+              else:
+                query += "NULL,"
+              if addr_line_2 != "NULL":
+                query += "'%s'," % addr_line_2
+              else:
+                query += "NULL,"
+              if postal_code != "NULL":
+                query += "'%s'," % postal_code
+              else:
+                query += "NULL,"
+              if city != "NULL":
+                query += "'%s'," % city
+              else:
+                query += "NULL,"
+              if state_province != "NULL":
+                query += "'%s'," % state_province
+              else:
+                query += "NULL,"
+              if country != "NULL":
+                query += "'%s'," % country
+              else:
+                query += "NULL,"
+              if ceo_name != "NULL":
+                query += "'%s'," % ceo_name
+              else:
+                query += "NULL,"
+              if description != "NULL":
+                query += "'%s'" % description
+              else:
+                query += "NULL"
+              query += ")"
+
+              s_company_values.append(query)
 
               if len(s_company_values)>=max_packet:
                 # Create query to load text data into tradeType table
