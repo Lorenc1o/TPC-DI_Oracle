@@ -539,8 +539,8 @@ class TPCDI_Loader():
                 description = "NULL"
 
               query = "%s (PTS,REC_TYPE,COMPANY_NAME,CIK,STATUS,INDUSTRY_ID,SP_RATING,FOUNDING_DATE,ADDR_LINE_1,"
-                "ADDR_LINE_2,POSTAL_CODE,CITY,STATE_PROVINCE,COUNTRY,CEO_NAME,DESCRIPTION) "
-                "VALUES ('%s','%s'," % (s_company_base_query, pts, rec_type)
+              "ADDR_LINE_2,POSTAL_CODE,CITY,STATE_PROVINCE,COUNTRY,CEO_NAME,DESCRIPTION) "
+              "VALUES ('%s','%s'," % (s_company_base_query, pts, rec_type)
 
               """s_company_values.append(
                 "%s (PTS,REC_TYPE,COMPANY_NAME,CIK,STATUS,INDUSTRY_ID,SP_RATING,FOUNDING_DATE,ADDR_LINE_1,"
