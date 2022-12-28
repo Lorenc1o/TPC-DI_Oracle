@@ -601,21 +601,160 @@ class TPCDI_Loader():
     """
     Create Dim Company table in the staging database and then load rows by joining staging_company, staging_industry, and staging StatusType
     """
-    # Create query to load data into DimCompany table from staging tables
-    cmd = TPCDI_Loader.BASE_SQL_CMD+" @%s " % (self.load_path+'/DimCompany.sql')
 
-    # Execute the command
-    os.system(cmd)
+    load_dim_company_query = """
+    INSERT INTO DimCompany (SK_CompanyID,CompanyID, Status,Name,Industry,SPrating,isLowGrade,CEO,AddressLine1,AddressLine2,PostalCode,City,StateProv,Country,Description,FoundingDate,IsCurrent,BatchID,EffectiveDate,EndDate)
+    SELECT ORA_HASH(ROWNUM), C.CIK, S.ST_NAME, C.COMPANY_NAME, I.IN_NAME,C.SP_RATING, 
+        CASE 
+            WHEN LPAD(C.SP_RATING,1)='A' OR LPAD(C.SP_RATING,3)='BBB' THEN
+                'false'
+            ELSE
+                'true'
+            END,
+        C.CEO_NAME, C.ADDR_LINE_1,C.ADDR_LINE_2, C.POSTAL_CODE, C.CITY, C.STATE_PROVINCE, C.COUNTRY, C.DESCRIPTION,
+        TO_DATE(FOUNDING_DATE,'YYYYMMDD'),'true', 1, TO_DATE(LPAD(C.PTS,8),'YYYYMMDD'), TO_DATE('99991231','YYYYMMDD')
+    FROM S_Company C
+    JOIN Industry I ON C.INDUSTRY_ID = I.IN_ID
+    JOIN StatusType S ON C.STATUS = S.ST_ID
+    WHERE FOUNDING_DATE <> '        ' and LPAD(C.PTS,8) <> '        ';
+
+    CREATE TABLE sdc_dimcompany 
+      (	SK_COMPANYID NUMBER(11,0), 
+      COMPANYID NUMBER(11,0) NOT NULL, 
+      STATUS CHAR(10) NOT NULL, 
+      NAME CHAR(60) NOT NULL, 
+      INDUSTRY CHAR(50) NOT NULL, 
+      SPRATING CHAR(4), 
+      ISLOWGRADE CHAR(5) NOT NULL, 
+      CEO CHAR(100) NOT NULL, 
+      ADDRESSLINE1 CHAR(80), 
+      ADDRESSLINE2 CHAR(80), 
+      POSTALCODE CHAR(12) NOT NULL, 
+      CITY CHAR(25) NOT NULL, 
+      STATEPROV CHAR(20) NOT NULL, 
+      COUNTRY CHAR(24), 
+      DESCRIPTION CHAR(150) NOT NULL, 
+      FOUNDINGDATE DATE, 
+      ISCURRENT CHAR(5) NOT NULL, 
+      BATCHID NUMBER(5,0) NOT NULL, 
+      EFFECTIVEDATE DATE NOT NULL, 
+      ENDDATE DATE NOT NULL, 
+      CHECK (isLowGrade = 'true' OR isLowGrade = 'false') ENABLE, 
+      CHECK (IsCurrent = 'true' OR IsCurrent = 'false') ENABLE, 
+      PRIMARY KEY ("SK_COMPANYID"));
+    ALTER TABLE sdc_dimcompany
+        ADD RN DECIMAL;
+    INSERT INTO sdc_dimcompany
+    SELECT DC.*, ROW_NUMBER() OVER(ORDER BY CompanyID, EffectiveDate) RN
+    FROM DimCompany DC;
+
+    UPDATE DimCompany 
+    SET DimCompany.EndDate = 
+        (SELECT EndDate FROM ( 
+            SELECT s1.SK_CompanyID,
+                    s2.EffectiveDate EndDate
+            FROM sdc_dimcompany s1
+            JOIN sdc_dimcompany s2 ON (s1.RN = (s2.RN - 1) AND s1.CompanyID = s2.CompanyID)
+            WHERE s1.SK_CompanyID = DimCompany.SK_CompanyID)),
+        DimCompany.IsCurrent = 
+        (SELECT 'false' FROM ( 
+            SELECT *
+            FROM sdc_dimcompany s1
+            JOIN sdc_dimcompany s2 ON (s1.RN = (s2.RN - 1) AND s1.CompanyID = s2.CompanyID)
+            WHERE s1.SK_CompanyID = DimCompany.SK_CompanyID))
+    WHERE EXISTS ( 
+            SELECT *
+            FROM sdc_dimcompany s1
+            JOIN sdc_dimcompany s2 ON (s1.RN = (s2.RN - 1) AND s1.CompanyID = s2.CompanyID)
+            WHERE s1.SK_CompanyID = DimCompany.SK_CompanyID);
+
+    DROP TABLE sdc_dimcompany;
+    """
+    with oracledb.connect(
+      user=self.oracle_user, password=self.oracle_pwd, 
+      dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+      with connection.cursor() as cursor:
+        cursor.execute(load_dim_company_query)
+      connection.commit()
   
   def load_target_dim_security(self):
     """
     Create Security table in the staging database and then load rows by joining staging_security, status_type and dim_company
     """
-    # Create query to load text data into security table
-    cmd = TPCDI_Loader.BASE_SQL_CMD+" @%s " % (self.load_path+'/DimSecurity.sql')
+    load_dim_security_query = """
+    INSERT INTO DimSecurity (SK_SecurityID, Symbol,Issue,Status,Name,ExchangeID,SK_CompanyID,SharesOutstanding,FirstTrade,FirstTradeOnExchange,Dividend,IsCurrent,BatchID,EffectiveDate,EndDate)
+    SELECT ORA_HASH(ROWNUM+SS.COMPANY_NAME_OR_CIK), SS.SYMBOL,SS.ISSUE_TYPE, ST.ST_NAME, SS.NAME, SS.EX_ID, DC.SK_CompanyID, SS.SH_OUT, TO_DATE(SS.FIRST_TRADE_DATE,'YYYY-MM-DD'),
+          TO_DATE(FIRST_TRADE_EXCHANGE, 'YYYY-MM-DD'), SS.DIVIDEN, 'true', 1, TO_DATE(LPAD(SS.PTS,8),'YYYY-MM-DD'), TO_DATE('99991231','YYYY-MM-DD')
+    FROM S_Security SS
+    JOIN StatusType ST ON SS.STATUS = ST.ST_ID
+    JOIN DimCompany DC ON DC.SK_CompanyID = CAST(SS.COMPANY_NAME_OR_CIK AS INTEGER)
+                        AND DC.EffectiveDate <= TO_DATE(LPAD(SS.PTS,8),'YYYY-MM-DD')
+                        AND TO_DATE(LPAD(SS.PTS,8),'YYYY-MM-DD') < DC.EndDate
+                        AND LPAD(SS.COMPANY_NAME_OR_CIK,1)='0';
+                        
+    INSERT INTO DimSecurity (SK_SecurityID, Symbol,Issue,Status,Name,ExchangeID,SK_CompanyID,SharesOutstanding,FirstTrade,FirstTradeOnExchange,Dividend,IsCurrent,BatchID,EffectiveDate,EndDate)
+    SELECT ORA_HASH(ROWNUM), SS.SYMBOL,SS.ISSUE_TYPE, ST.ST_NAME, SS.NAME, SS.EX_ID, DC.SK_CompanyID, SS.SH_OUT, TO_DATE(SS.FIRST_TRADE_DATE,'YYYY-MM-DD'),
+          TO_DATE(FIRST_TRADE_EXCHANGE, 'YYYY-MM-DD'), SS.DIVIDEN, 'true', 1, TO_DATE(LPAD(SS.PTS,8),'YYYY-MM-DD'), TO_DATE('99991231','YYYY-MM-DD')
+    FROM S_Security SS
+    JOIN StatusType ST ON SS.STATUS = ST.ST_ID
+    JOIN DimCompany DC ON RTRIM(SS.COMPANY_NAME_OR_CIK) = DC.Name
+                        AND DC.EffectiveDate <= TO_DATE(LPAD(SS.PTS,8),'YYYY-MM-DD')
+                        AND TO_DATE(LPAD(SS.PTS,8),'YYYY-MM-DD') < DC.EndDate
+                        AND LPAD(SS.COMPANY_NAME_OR_CIK,1) <> '0';
+                        
+    CREATE TABLE sdc_dimsecurity
+      (	SK_SECURITYID NUMBER(11,0), 
+      SYMBOL CHAR(15) NOT NULL, 
+      ISSUE CHAR(6) NOT NULL, 
+      STATUS CHAR(10) NOT NULL, 
+      NAME CHAR(70) NOT NULL, 
+      EXCHANGEID CHAR(6) NOT NULL, 
+      SK_COMPANYID NUMBER(11,0) NOT NULL, 
+      SHARESOUTSTANDING NUMBER(12,0) NOT NULL, 
+      FIRSTTRADE DATE NOT NULL, 
+      FIRSTTRADEONEXCHANGE DATE NOT NULL, 
+      DIVIDEND NUMBER(10,2) NOT NULL, 
+      ISCURRENT CHAR(5) NOT NULL, 
+      BATCHID NUMBER(5,0) NOT NULL, 
+      EFFECTIVEDATE DATE NOT NULL, 
+      ENDDATE DATE NOT NULL, 
+      CHECK (IsCurrent = 'false' or IsCurrent = 'true') ENABLE, 
+      PRIMARY KEY ("SK_SECURITYID"));
+        
+    ALTER TABLE sdc_dimsecurity
+      ADD RN DECIMAL;
 
-    # Execute the command
-    os.system(cmd)
+    INSERT INTO sdc_dimsecurity
+    SELECT DS.*, ROW_NUMBER() OVER(ORDER BY Symbol, EffectiveDate) RN
+    FROM DimSecurity DS;
+
+    UPDATE DimSecurity
+    SET DimSecurity.EndDate = 
+        (SELECT EndDate FROM (
+            SELECT s1.SK_SecurityID, s2.EffectiveDate EndDate
+            FROM sdc_dimsecurity s1
+            JOIN sdc_dimsecurity s2 ON (s1.RN = (s2.RN - 1) AND s1.Symbol = s2.Symbol)
+            WHERE s1.SK_SecurityID = DimSecurity.SK_SecurityID)),
+        DimSecurity.IsCurrent = 
+        (SELECT 'false' FROM (
+            SELECT s1.SK_SecurityID, s2.EffectiveDate EndDate
+            FROM sdc_dimsecurity s1
+            JOIN sdc_dimsecurity s2 ON (s1.RN = (s2.RN - 1) AND s1.Symbol = s2.Symbol)
+            WHERE s1.SK_SecurityID = DimSecurity.SK_SecurityID))
+        WHERE EXISTS (SELECT * FROM (
+            SELECT s1.SK_SecurityID, s2.EffectiveDate EndDate
+            FROM sdc_dimsecurity s1
+            JOIN sdc_dimsecurity s2 ON (s1.RN = (s2.RN - 1) AND s1.Symbol = s2.Symbol)
+            WHERE s1.SK_SecurityID = DimSecurity.SK_SecurityID));
+            
+    DROP TABLE sdc_dimsecurity;
+    """
+    with oracledb.connect(
+      user=self.oracle_user, password=self.oracle_pwd, 
+      dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+      with connection.cursor() as cursor:
+        cursor.execute(load_dim_security_query)
+      connection.commit()
 
   def load_target_financial(self):
     """
