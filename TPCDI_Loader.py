@@ -612,7 +612,6 @@ class TPCDI_Loader():
                   dsn=self.oracle_host+'/'+self.oracle_db) as connection:
                   with connection.cursor() as cursor:
                     for query in s_company_values:
-                      print(query)
                       cursor.execute(query)
                   connection.commit()
                 s_company_values = []
