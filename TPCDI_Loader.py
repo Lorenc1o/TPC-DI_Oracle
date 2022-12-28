@@ -156,9 +156,18 @@ class TPCDI_Loader():
               if phone_number is not None and phone['C_EXT'] is not None:
                 phone_number = phone_number + phone['C_EXT']
               phone_numbers.append(phone_number)
+              c_nat_tx_id = action['Customer']['TaxInfo']['C_NAT_TX_ID']
+              c_lcl_tx_id = action['Customer']['TaxInfo']['C_LCL_TX_ID']
             insert = f"""
-            INSERT INTO DimCustomer(CustomerID, TaxID, Status, LastName, FirstName, MiddleInitial, Gender, Tier, DOB, AddressLine1, AddressLine2, PostalCode, City, StateProv, Country, Phone1, Phone2, Phone3, Email1, Email2, BatchId)
-            VALUES ({c_id}, '{char_insert(c_tax_id)}', '{char_insert(c_status)}', '{char_insert(c_l_name)}', '{char_insert(c_f_name)}', '{char_insert(c_m_name)}', '{char_insert(c_gndr)}', {c_tier}, TO_DATE('{c_dob}', 'yyyy-mm-dd'), '{char_insert(c_adline1)}', '{char_insert(c_adline2)}', '{char_insert(c_zipcode)}', '{char_insert(c_city)}', '{char_insert(c_state_prov)}', '{char_insert(c_ctry)}', '{char_insert(phone_numbers[0])}', '{char_insert(phone_numbers[1])}', '{char_insert(phone_numbers[2])}', '{char_insert(c_prim_email)}', '{char_insert(c_alt_email)}', {self.batch_number})
+            INSERT INTO DimCustomer(CustomerID, TaxID, Status, LastName, FirstName, MiddleInitial, Gender, Tier, DOB, AddressLine1, AddressLine2, PostalCode,
+              City, StateProv, Country, Phone1, Phone2, Phone3, Email1, Email2, NationalTaxRateDesc, NationalTaxRate, LocalTaxRateDesc, LocalTaxRate, BatchId)
+            VALUES ({c_id}, '{char_insert(c_tax_id)}', '{char_insert(c_status)}', '{char_insert(c_l_name)}', '{char_insert(c_f_name)}', '{char_insert(c_m_name)}', 
+              '{char_insert(c_gndr)}', {c_tier}, TO_DATE('{c_dob}', 'yyyy-mm-dd'), '{char_insert(c_adline1)}', '{char_insert(c_adline2)}', '{char_insert(c_zipcode)}', 
+              '{char_insert(c_city)}', '{char_insert(c_state_prov)}', '{char_insert(c_ctry)}', '{char_insert(phone_numbers[0])}', '{char_insert(phone_numbers[1])}', 
+              '{char_insert(phone_numbers[2])}', '{char_insert(c_prim_email)}', '{char_insert(c_alt_email)}', 
+              (SELECT TX_NAME FROM TaxRate WHERE TX_ID = '{c_nat_tx_id}'), (SELECT TX_RATE FROM TaxRate WHERE TX_ID = '{c_nat_tx_id}'),
+              (SELECT TX_NAME FROM TaxRate WHERE TX_ID = '{c_lcl_tx_id}'), (SELECT TX_RATE FROM TaxRate WHERE TX_ID = '{c_lcl_tx_id}'),
+              {self.batch_number})
             """
             print(insert)
             customer_inserts.append(insert)

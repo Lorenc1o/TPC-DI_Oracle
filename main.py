@@ -44,7 +44,7 @@ if __name__ == "__main__":
             # loader.load_dim_time()
             # loader.load_industry()
             # loader.load_status_type()
-            # loader.load_tax_rate()
+            loader.load_tax_rate()
             # loader.load_trade_type()
             # loader.load_audit()
             
