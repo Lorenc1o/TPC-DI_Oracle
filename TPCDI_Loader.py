@@ -557,9 +557,9 @@ class TPCDI_Loader():
                 query += "'%s'," % company_name
               else:
                 query += "NULL,"
-              s_company_values.append("'%s'," % cik)
-              s_company_values.append("'%s'," % status)
-              s_company_values.append("'%s'," % industry_id)
+              query += "'%s'," % cik
+              query += "'%s'," % status
+              query += "'%s'," % industry_id
               if sp_rating != "NULL":
                 query += "'%s'," % sp_rating
               else:
