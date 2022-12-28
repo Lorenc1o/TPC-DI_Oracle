@@ -604,6 +604,7 @@ class TPCDI_Loader():
 
               if len(s_company_values)>=max_packet:
                 print("yes 1")
+                print(s_company_values)
                 # Create query to load text data into tradeType table
                 with oracledb.connect(
                   user=self.oracle_user, password=self.oracle_pwd, 
