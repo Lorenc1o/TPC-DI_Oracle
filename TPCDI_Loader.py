@@ -110,6 +110,7 @@ class TPCDI_Loader():
       actions = doc['TPCDI:Actions']['TPCDI:Action']
       for action in actions:
         action_type = action['@ActionType']
+        # Customer fields
         try:
           c_id = action['Customer']['@C_ID']
         except:
@@ -228,7 +229,7 @@ class TPCDI_Loader():
             action_ts_date = action['@ActionTS'][0:10]
           except:
             action_ts_date = None
-        insert = f"""
+        insert_customer = f"""
         INSERT INTO S_Customer (ActionType, CustomerID, TaxID, Status, LastName, FirstName, MiddleInitial, Gender, Tier, DOB, AddressLine1, AddressLine2, PostalCode,
           City, StateProv, Country, Phone1, Phone2, Phone3, Email1, Email2, NationalTaxRateDesc, NationalTaxRate, LocalTaxRateDesc, LocalTaxRate, EffectiveDate, EndDate, BatchId)
         VALUES ('{char_insert(action_type)}', {c_id}, '{char_insert(c_tax_id)}', '{char_insert(c_status)}', '{char_insert(c_l_name)}', '{char_insert(c_f_name)}', '{char_insert(c_m_name)}', 
@@ -239,8 +240,32 @@ class TPCDI_Loader():
           (SELECT TX_NAME FROM TaxRate WHERE TX_ID = '{char_insert(c_lcl_tx_id)}'), (SELECT TX_RATE FROM TaxRate WHERE TX_ID = '{char_insert(c_lcl_tx_id)}'),
           TO_DATE('{char_insert(action_ts_date)}', 'yyyy-mm-dd'), TO_DATE('9999-12-31', 'yyyy-mm-dd'), {self.batch_number})
         """
-        print(insert)
-        customer_inserts.append(insert)
+        print(insert_customer)
+        customer_inserts.append(insert_customer)
+        # Account fields
+        try:
+          a_id = action['Account']['@AccountID']
+        except:
+          a_id = None
+        try:
+          a_Desc = action['Account']['CA_NAME']
+        except:
+          a_Desc = None
+        try:
+          a_taxStatus = action['Account']['CA_TAX_ST']
+        except:
+          a_taxStatus = None
+        # action_type we have it already
+        try:
+          action_ts_date = action['@ActionTS'][0:10]
+        except:
+          action_ts_date = None
+        insert_account = f"""
+        INSERT INTO S_Account (ActionType, AccountID, Status, AccountDesc, TaxStatus, EffectiveDate, EndDate, BatchId)
+        VALUES ('{char_insert(action_type)}', {a_id}, 'Active', '{char_insert(a_Desc)}', '{char_insert(a_taxStatus)}',
+          TO_DATE('{char_insert(action_ts_date)}', 'yyyy-mm-dd'), TO_DATE('9999-12-31', 'yyyy-mm-dd'), {self.batch_number})
+        """
+
 
     with oracledb.connect(
       user=self.oracle_user, password=self.oracle_pwd, 
@@ -257,6 +282,7 @@ class TPCDI_Loader():
     """
     Load NEW customers into DimCustomer table
     """
+    # First, we insert all NEW customers into the DimCustomer table
     load_query = """
       INSERT INTO DimCustomer(CustomerID, TaxID, Status, LastName, FirstName, MiddleInitial, Gender, Tier, DOB, AddressLine1, AddressLine2, PostalCode,
                 City, StateProv, Country, Phone1, Phone2, Phone3, Email1, Email2, NationalTaxRateDesc, NationalTaxRate, LocalTaxRateDesc, LocalTaxRate, EffectiveDate, 
@@ -386,7 +412,14 @@ class TPCDI_Loader():
         cursor.execute(update_query_local_tax_rate)
         cursor.execute(update_query_end_date)
       connection.commit()
-            
+
+  def load_new_account(self):
+    """
+    Load NEW rows in S_Account into DimAccount table in the target database.
+    """
+    # First, we insert all NEW rows from S_Account into DimAccount
+    load_query = """
+    """
   
   def load_staging_broker(self):
     """
