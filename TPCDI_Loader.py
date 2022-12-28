@@ -617,7 +617,8 @@ class TPCDI_Loader():
     JOIN Industry I ON C.INDUSTRY_ID = I.IN_ID
     JOIN StatusType S ON C.STATUS = S.ST_ID
     WHERE FOUNDING_DATE <> '        ' and LPAD(C.PTS,8) <> '        ';
-
+    """
+    create_sdc_dimcompany_query = """
     CREATE TABLE sdc_dimcompany 
       (	SK_COMPANYID NUMBER(11,0), 
       COMPANYID NUMBER(11,0) NOT NULL, 
@@ -642,12 +643,17 @@ class TPCDI_Loader():
       CHECK (isLowGrade = 'true' OR isLowGrade = 'false') ENABLE, 
       CHECK (IsCurrent = 'true' OR IsCurrent = 'false') ENABLE, 
       PRIMARY KEY ("SK_COMPANYID"));
+    """
+    alter_sdc_dimcompany_query = """
     ALTER TABLE sdc_dimcompany
         ADD RN DECIMAL;
+    """
+    fill_sdc_dimcompany_query = """
     INSERT INTO sdc_dimcompany
     SELECT DC.*, ROW_NUMBER() OVER(ORDER BY CompanyID, EffectiveDate) RN
     FROM DimCompany DC;
-
+    """
+    update_sdc_dimcompany_query = """
     UPDATE DimCompany 
     SET DimCompany.EndDate = 
         (SELECT EndDate FROM ( 
@@ -667,7 +673,8 @@ class TPCDI_Loader():
             FROM sdc_dimcompany s1
             JOIN sdc_dimcompany s2 ON (s1.RN = (s2.RN - 1) AND s1.CompanyID = s2.CompanyID)
             WHERE s1.SK_CompanyID = DimCompany.SK_CompanyID);
-
+    """
+    drop_sdc_dimcompany_query = """
     DROP TABLE sdc_dimcompany;
     """
     with oracledb.connect(
@@ -675,6 +682,11 @@ class TPCDI_Loader():
       dsn=self.oracle_host+'/'+self.oracle_db) as connection:
       with connection.cursor() as cursor:
         cursor.execute(load_dim_company_query)
+        cursor.execute(create_sdc_dimcompany_query)
+        cursor.execute(alter_sdc_dimcompany_query)
+        cursor.execute(fill_sdc_dimcompany_query)
+        cursor.execute(update_sdc_dimcompany_query)
+        cursor.execute(drop_sdc_dimcompany_query)
       connection.commit()
   
   def load_target_dim_security(self):
