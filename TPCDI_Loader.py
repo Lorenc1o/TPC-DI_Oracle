@@ -616,7 +616,7 @@ class TPCDI_Loader():
     FROM S_Company C
     JOIN Industry I ON C.INDUSTRY_ID = I.IN_ID
     JOIN StatusType S ON C.STATUS = S.ST_ID
-    WHERE FOUNDING_DATE <> '        ' and LPAD(C.PTS,8) <> '        ';
+    WHERE FOUNDING_DATE <> '        ' and LPAD(C.PTS,8) <> '        '
     """
     create_sdc_dimcompany_query = """
     CREATE TABLE sdc_dimcompany 
@@ -642,16 +642,16 @@ class TPCDI_Loader():
       ENDDATE DATE NOT NULL, 
       CHECK (isLowGrade = 'true' OR isLowGrade = 'false') ENABLE, 
       CHECK (IsCurrent = 'true' OR IsCurrent = 'false') ENABLE, 
-      PRIMARY KEY ("SK_COMPANYID"));
+      PRIMARY KEY ("SK_COMPANYID"))
     """
     alter_sdc_dimcompany_query = """
     ALTER TABLE sdc_dimcompany
-        ADD RN DECIMAL;
+        ADD RN DECIMAL
     """
     fill_sdc_dimcompany_query = """
     INSERT INTO sdc_dimcompany
     SELECT DC.*, ROW_NUMBER() OVER(ORDER BY CompanyID, EffectiveDate) RN
-    FROM DimCompany DC;
+    FROM DimCompany DC
     """
     update_sdc_dimcompany_query = """
     UPDATE DimCompany 
@@ -672,10 +672,10 @@ class TPCDI_Loader():
             SELECT *
             FROM sdc_dimcompany s1
             JOIN sdc_dimcompany s2 ON (s1.RN = (s2.RN - 1) AND s1.CompanyID = s2.CompanyID)
-            WHERE s1.SK_CompanyID = DimCompany.SK_CompanyID);
+            WHERE s1.SK_CompanyID = DimCompany.SK_CompanyID)
     """
     drop_sdc_dimcompany_query = """
-    DROP TABLE sdc_dimcompany;
+    DROP TABLE sdc_dimcompany
     """
     with oracledb.connect(
       user=self.oracle_user, password=self.oracle_pwd, 
@@ -693,7 +693,7 @@ class TPCDI_Loader():
     """
     Create Security table in the staging database and then load rows by joining staging_security, status_type and dim_company
     """
-    load_dim_security_query = """
+    load_dim_security_query_1 = """
     INSERT INTO DimSecurity (SK_SecurityID, Symbol,Issue,Status,Name,ExchangeID,SK_CompanyID,SharesOutstanding,FirstTrade,FirstTradeOnExchange,Dividend,IsCurrent,BatchID,EffectiveDate,EndDate)
     SELECT ORA_HASH(ROWNUM+SS.COMPANY_NAME_OR_CIK), SS.SYMBOL,SS.ISSUE_TYPE, ST.ST_NAME, SS.NAME, SS.EX_ID, DC.SK_CompanyID, SS.SH_OUT, TO_DATE(SS.FIRST_TRADE_DATE,'YYYY-MM-DD'),
           TO_DATE(FIRST_TRADE_EXCHANGE, 'YYYY-MM-DD'), SS.DIVIDEN, 'true', 1, TO_DATE(LPAD(SS.PTS,8),'YYYY-MM-DD'), TO_DATE('99991231','YYYY-MM-DD')
@@ -702,8 +702,10 @@ class TPCDI_Loader():
     JOIN DimCompany DC ON DC.SK_CompanyID = CAST(SS.COMPANY_NAME_OR_CIK AS INTEGER)
                         AND DC.EffectiveDate <= TO_DATE(LPAD(SS.PTS,8),'YYYY-MM-DD')
                         AND TO_DATE(LPAD(SS.PTS,8),'YYYY-MM-DD') < DC.EndDate
-                        AND LPAD(SS.COMPANY_NAME_OR_CIK,1)='0';
-                        
+                        AND LPAD(SS.COMPANY_NAME_OR_CIK,1)='0'
+    """
+
+    load_dim_security_query_2 = """                    
     INSERT INTO DimSecurity (SK_SecurityID, Symbol,Issue,Status,Name,ExchangeID,SK_CompanyID,SharesOutstanding,FirstTrade,FirstTradeOnExchange,Dividend,IsCurrent,BatchID,EffectiveDate,EndDate)
     SELECT ORA_HASH(ROWNUM), SS.SYMBOL,SS.ISSUE_TYPE, ST.ST_NAME, SS.NAME, SS.EX_ID, DC.SK_CompanyID, SS.SH_OUT, TO_DATE(SS.FIRST_TRADE_DATE,'YYYY-MM-DD'),
           TO_DATE(FIRST_TRADE_EXCHANGE, 'YYYY-MM-DD'), SS.DIVIDEN, 'true', 1, TO_DATE(LPAD(SS.PTS,8),'YYYY-MM-DD'), TO_DATE('99991231','YYYY-MM-DD')
@@ -712,8 +714,9 @@ class TPCDI_Loader():
     JOIN DimCompany DC ON RTRIM(SS.COMPANY_NAME_OR_CIK) = DC.Name
                         AND DC.EffectiveDate <= TO_DATE(LPAD(SS.PTS,8),'YYYY-MM-DD')
                         AND TO_DATE(LPAD(SS.PTS,8),'YYYY-MM-DD') < DC.EndDate
-                        AND LPAD(SS.COMPANY_NAME_OR_CIK,1) <> '0';
-                        
+                        AND LPAD(SS.COMPANY_NAME_OR_CIK,1) <> '0'
+    """
+    create_sdc_dimsecurity_query = """                        
     CREATE TABLE sdc_dimsecurity
       (	SK_SECURITYID NUMBER(11,0), 
       SYMBOL CHAR(15) NOT NULL, 
@@ -731,15 +734,18 @@ class TPCDI_Loader():
       EFFECTIVEDATE DATE NOT NULL, 
       ENDDATE DATE NOT NULL, 
       CHECK (IsCurrent = 'false' or IsCurrent = 'true') ENABLE, 
-      PRIMARY KEY ("SK_SECURITYID"));
-        
+      PRIMARY KEY ("SK_SECURITYID"))
+    """
+    alter_sdc_dimsecurity_query = """        
     ALTER TABLE sdc_dimsecurity
-      ADD RN DECIMAL;
-
+      ADD RN DECIMAL
+    """
+    fill_sdc_dimsecurity_query = """
     INSERT INTO sdc_dimsecurity
     SELECT DS.*, ROW_NUMBER() OVER(ORDER BY Symbol, EffectiveDate) RN
-    FROM DimSecurity DS;
-
+    FROM DimSecurity DS
+    """
+    update_sdc_dimsecurity_query = """
     UPDATE DimSecurity
     SET DimSecurity.EndDate = 
         (SELECT EndDate FROM (
@@ -757,9 +763,10 @@ class TPCDI_Loader():
             SELECT s1.SK_SecurityID, s2.EffectiveDate EndDate
             FROM sdc_dimsecurity s1
             JOIN sdc_dimsecurity s2 ON (s1.RN = (s2.RN - 1) AND s1.Symbol = s2.Symbol)
-            WHERE s1.SK_SecurityID = DimSecurity.SK_SecurityID));
-            
-    DROP TABLE sdc_dimsecurity;
+            WHERE s1.SK_SecurityID = DimSecurity.SK_SecurityID))
+    """
+    drop_sdc_dimsecurity_query = """            
+    DROP TABLE sdc_dimsecurity
     """
     with oracledb.connect(
       user=self.oracle_user, password=self.oracle_pwd, 
