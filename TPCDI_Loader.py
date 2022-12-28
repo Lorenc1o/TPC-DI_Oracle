@@ -556,29 +556,51 @@ class TPCDI_Loader():
               # now we add all the values which are not "NULL"
               if company_name != "NULL":
                 s_company_values.append("'%s'," % company_name)
+              else:
+                s_company_values.append("NULL,")
               s_company_values.append("'%s'," % cik)
               s_company_values.append("'%s'," % status)
               s_company_values.append("'%s'," % industry_id)
               if sp_rating != "NULL":
                 s_company_values.append("'%s'," % sp_rating)
+              else:
+                s_company_values.append("NULL,")
               if founding_date != "NULL":
                 s_company_values.append("'%s'," % founding_date)
+              else:
+                s_company_values.append("NULL,")
               if addr_line_1 != "NULL":
                 s_company_values.append("'%s'," % addr_line_1)
+              else:
+                s_company_values.append("NULL,")
               if addr_line_2 != "NULL":
                 s_company_values.append("'%s'," % addr_line_2)
+              else:
+                s_company_values.append("NULL,")
               if postal_code != "NULL":
                 s_company_values.append("'%s'," % postal_code)
+              else:
+                s_company_values.append("NULL,")
               if city != "NULL":
                 s_company_values.append("'%s'," % city)
+              else:
+                s_company_values.append("NULL,")
               if state_province != "NULL":
                 s_company_values.append("'%s'," % state_province)
+              else:
+                s_company_values.append("NULL,")
               if country != "NULL":
                 s_company_values.append("'%s'," % country)
+              else:
+                s_company_values.append("NULL,")
               if ceo_name != "NULL":
                 s_company_values.append("'%s'," % ceo_name)
+              else:
+                s_company_values.append("NULL,")
               if description != "NULL":
                 s_company_values.append("'%s')" % description)
+              else:
+                s_company_values.append("NULL)")
 
               if len(s_company_values)>=max_packet:
                 print("yes 1")
