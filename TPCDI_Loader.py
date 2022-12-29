@@ -355,9 +355,9 @@ class TPCDI_Loader():
     load_query = """
       INSERT INTO DimAccount (AccountID, SK_BrokerID, SK_CustomerID, Status, AccountDesc, TaxStatus, IsCurrent, BatchID, EffectiveDate, EndDate)
       WITH Copied AS (
-        SELECT A.AccountID, B.SK_BrokerID, C.SK_CustomerID, A.Status, A.AccountDesc, A.TaxStatus, A.IsCurrent, A.BatchID, A.EffectiveDate, A.EndDate
+        SELECT A.AccountID, B.SK_BrokerID, C.SK_CustomerID, A.Status, A.AccountDesc, A.TaxStatus, A.BatchID, A.EffectiveDate, A.EndDate
         FROM S_Account A
-        JOIN BROKER B ON A.BrokerID = B.BrokerID
+        JOIN DimBroker B ON A.BrokerID = B.BrokerID
         JOIN DimCustomer C ON A.CustomerID = C.CustomerID
         WHERE A.ActionType = 'NEW' AND
           NOT EXISTS (
@@ -369,7 +369,7 @@ class TPCDI_Loader():
       )
       SELECT A.AccountID, CP.SK_BrokerID, CP.SK_CustomerID, A.Status, A.AccountDesc, A.TaxStatus, 'true', A.BatchID, A.EffectiveDate, A.EndDate
       FROM S_Account A
-      LEFT OUTER JOIN Copied CP ON (A.AccountID = C.AccountID)
+      LEFT OUTER JOIN Copied CP ON (A.AccountID = CP.AccountID)
       WHERE A.ActionType = 'NEW'
     """
     with oracledb.connect(
