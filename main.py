@@ -51,7 +51,7 @@ if __name__ == "__main__":
             # # # Step 3: Load staging tables
             # loader.load_staging_finwire()
             loader.load_staging_prospect()
-            # loader.load_staging_broker()
+            loader.load_staging_broker()
             
             # loader.load_staging_cash_balances()
             # loader.load_staging_watches()
@@ -60,6 +60,7 @@ if __name__ == "__main__":
             # loader.load_target_dim_company()
             # loader.load_target_financial()
             # loader.load_target_dim_security()
+            loader.load_broker()
             loader.load_prospect()
             loader.load_staging_customer_account()
             loader.load_new_customer()
@@ -67,6 +68,5 @@ if __name__ == "__main__":
             loader.load_update_customer()
             loader.load_inact_customer()
             loader.update_prospect()
-            # loader.load_broker()
     end = time.time()
     print(end-start)
