@@ -1171,7 +1171,7 @@ class TPCDI_Loader():
                         AND DC.EffectiveDate <= TO_DATE(LPAD(SS.PTS,8),'YYYY-MM-DD')
                         AND TO_DATE(LPAD(SS.PTS,8),'YYYY-MM-DD') < DC.EndDate
                         AND LPAD(SS.COMPANY_NAME_OR_CIK,1)='0'
-    """.format(self.batch_id)
+    """.format(self.batch_number)
 
     load_dim_security_query_2 = """                    
     INSERT INTO DimSecurity (Symbol,Issue,Status,Name,ExchangeID,SK_CompanyID,SharesOutstanding,FirstTrade,FirstTradeOnExchange,Dividend,IsCurrent,BatchID,EffectiveDate,EndDate)
@@ -1183,8 +1183,8 @@ class TPCDI_Loader():
                         AND DC.EffectiveDate <= TO_DATE(LPAD(SS.PTS,8),'YYYY-MM-DD')
                         AND TO_DATE(LPAD(SS.PTS,8),'YYYY-MM-DD') < DC.EndDate
                         AND LPAD(SS.COMPANY_NAME_OR_CIK,1) <> '0'
-    """.format(self.batch_id)
-    
+    """.format(self.batch_number)
+
     create_sdc_dimsecurity_query = """                        
     CREATE TABLE sdc_dimsecurity
       (	SK_SECURITYID NUMBER(11,0), 
