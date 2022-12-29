@@ -1154,6 +1154,11 @@ class TPCDI_Loader():
         cursor.execute(update_sdc_dimcompany_query)
         cursor.execute(drop_sdc_dimcompany_query)
       connection.commit()
+    
+    # adding invalid SPRatings to DIMessages
+    cmd = TPCDI_Loader.BASE_SQL_CMD+' @%s' % (self.load_path+'/dimessages_company.sql')
+    os.system(cmd)
+
     print('Done.')
   
   def load_target_dim_security(self):
