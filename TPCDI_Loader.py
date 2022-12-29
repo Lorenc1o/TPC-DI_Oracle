@@ -397,30 +397,54 @@ class TPCDI_Loader():
     # To finalize the update, we need to update the values from Prospect
     base_update_prospect_query = """
     UPDATE DimCustomer C
-      SET C.%s = (
-        SELECT MAX(CP.%s)
-        FROM (SELECT P.%s
+      SET C.AgencyID = (
+        SELECT MAX(CP.AgencyID)
+        FROM (SELECT P.AgencyID
               FROM Prospect P
               WHERE P.FirstName = C.FirstName AND 
                   UPPER(P.LastName) = UPPER(C.LastName) AND
                   TRIM(UPPER(P.AddressLine1)) = TRIM(UPPER(C.AddressLine1)) AND
                   TRIM(UPPER(P.AddressLine2)) = TRIM(UPPER(C.AddressLine2)) AND
                   TRIM(UPPER(P.PostalCode)) = TRIM(UPPER(C.PostalCode))
-              ) CP)
-        WHERE EXISTS ( 
-            SELECT * FROM Prospect P
-            WHERE P.FirstName = C.FirstName AND
-              UPPER(P.LastName) = UPPER(C.LastName) AND
-              TRIM(UPPER(P.AddressLine1)) = TRIM(UPPER(C.AddressLine1)) AND
-              TRIM(UPPER(P.AddressLine2)) = TRIM(UPPER(C.AddressLine2)) AND
-              TRIM(UPPER(P.PostalCode)) = TRIM(UPPER(C.PostalCode))
-          )
+              ) CP),
+          C.CreditRating = (
+          SELECT MAX(CP.CreditRating)
+          FROM (SELECT P.CreditRating
+                FROM Prospect P
+                WHERE P.FirstName = C.FirstName AND 
+                    UPPER(P.LastName) = UPPER(C.LastName) AND
+                    TRIM(UPPER(P.AddressLine1)) = TRIM(UPPER(C.AddressLine1)) AND
+                    TRIM(UPPER(P.AddressLine2)) = TRIM(UPPER(C.AddressLine2)) AND
+                    TRIM(UPPER(P.PostalCode)) = TRIM(UPPER(C.PostalCode))
+                ) CP),
+          C.NetWorth = (
+          SELECT MAX(CP.NetWorth)
+          FROM (SELECT P.NetWorth
+                FROM Prospect P
+                WHERE P.FirstName = C.FirstName AND 
+                    UPPER(P.LastName) = UPPER(C.LastName) AND
+                    TRIM(UPPER(P.AddressLine1)) = TRIM(UPPER(C.AddressLine1)) AND
+                    TRIM(UPPER(P.AddressLine2)) = TRIM(UPPER(C.AddressLine2)) AND
+                    TRIM(UPPER(P.PostalCode)) = TRIM(UPPER(C.PostalCode))
+                ) CP),
+          C.MarketingNameplate = (
+          SELECT MAX(CP.MarketingNameplate)
+          FROM (SELECT P.MarketingNameplate
+                FROM Prospect P
+                WHERE P.FirstName = C.FirstName AND 
+                    UPPER(P.LastName) = UPPER(C.LastName) AND
+                    TRIM(UPPER(P.AddressLine1)) = TRIM(UPPER(C.AddressLine1)) AND
+                    TRIM(UPPER(P.AddressLine2)) = TRIM(UPPER(C.AddressLine2)) AND
+                    TRIM(UPPER(P.PostalCode)) = TRIM(UPPER(C.PostalCode))
+                ) CP)
+      WHERE C1.CustomerID = C.CustomerID AND
+        C1.ActionType IN ('NEW', 'UPDCUST') AND
+        NOT EXISTS (
+          SELECT * FROM S_Customer C2
+          WHERE C2.CustomerID = C1.CustomerID AND
+            C2.ActionType IN ('NEW', 'UPDCUST') AND C2.EffectiveDate > C1.EffectiveDate)
+      )
     """
-    update_query_agency_id = base_update_prospect_query % ('AgencyID', 'AgencyID', 'AgencyID')
-    update_query_credit_rating = base_update_prospect_query % ('CreditRating', 'CreditRating', 'CreditRating')
-    update_query_net_worth = base_update_prospect_query % ('NetWorth', 'NetWorth', 'NetWorth')
-    update_query_marketing_nameplate = base_update_prospect_query % ('MarketingNameplate', 'MarketingNameplate', 'MarketingNameplate')
-
     with oracledb.connect(
       user=self.oracle_user, password=self.oracle_pwd, 
       dsn=self.oracle_host+'/'+self.oracle_db) as connection:
@@ -447,10 +471,7 @@ class TPCDI_Loader():
         cursor.execute(update_query_national_tax_rate)
         cursor.execute(update_query_local_tax_rate_desc)
         cursor.execute(update_query_local_tax_rate)
-        cursor.execute(update_query_agency_id)
-        cursor.execute(update_query_credit_rating)
-        cursor.execute(update_query_net_worth)
-        cursor.execute(update_query_marketing_nameplate)
+        cursor.execute(base_update_prospect_query)
       connection.commit()
     print('Done.')
 
