@@ -536,26 +536,30 @@ class TPCDI_Loader():
     INSERT INTO Financial
       SELECT SK_CompanyID, SF.YEAR, SF.QUARTER, SF.QTR_START_DATE, SF.REVENUE,  SF.EARNINGS, SF.EPS, SF.DILUTED_EPS,SF.MARGIN, SF.INVENTORY, SF.ASSETS, SF.LIABILITIES, SF.SH_OUT, SF.DILUTED_SH_OUT
       FROM S_Financial SF
-      JOIN DimCompany DC ON DC.SK_CompanyID = convert(SF.CO_NAME_OR_CIK, SIGNED)
-                          AND DC.EffectiveDate <= STR_TO_DATE(LEFT(SF.PTS,8),'%Y%m%d')
-                          AND STR_TO_DATE(LEFT(SF.PTS,8),'%Y%m%d') < DC.EndDate
-                          AND LEFT(CO_NAME_OR_CIK,1)='0';
+      JOIN DimCompany DC ON DC.SK_CompanyID = cast(SF.CO_NAME_OR_CIK as INT)
+                          AND DC.EffectiveDate <= TO_DATE(SUBSTR(SF.PTS, 1,8),'YYYY-MM-DD')
+                          AND TO_DATE(SUBSTR(SF.PTS, 1,8),'YYYY-MM-DD') < DC.EndDate
+                          AND SUBSTR(CO_NAME_OR_CIK, 1,1)='0'
+    """.format(self.batch_number)
+    print(financial_load_query)
+    financial_load_query2="""
     INSERT INTO Financial
       SELECT SK_CompanyID, SF.YEAR, SF.QUARTER, SF.QTR_START_DATE, SF.REVENUE,  SF.EARNINGS, SF.EPS, SF.DILUTED_EPS,SF.MARGIN, SF.INVENTORY, SF.ASSETS, SF.LIABILITIES, SF.SH_OUT, SF.DILUTED_SH_OUT
       FROM S_Financial SF
       JOIN DimCompany DC ON RTRIM(SF.CO_NAME_OR_CIK) = DC.Name
-                          AND DC.EffectiveDate <= STR_TO_DATE(LEFT(SF.PTS,8),'%Y%m%d')
-                          AND STR_TO_DATE(LEFT(SF.PTS,8),'%Y%m%d') < DC.EndDate
-                          AND LEFT(CO_NAME_OR_CIK,1) <> '0'
-    """
-    
-    # Construct mysql client bash command to execute ddl and data loading query
-    # dim_financial_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+financial_ddl+"\""
-    # dim_financial_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+financial_load_query+"\""
-    
-    # Execute the command
-    os.system(dim_financial_ddl_cmd)
-    os.system(dim_financial_load_cmd)    
+                          AND DC.EffectiveDate <= TO_DATE(SUBSTR(SF.PTS, 1,8),'YYYY-MM-DD')
+                          AND TO_DATE(SUBSTR(SF.PTS, 1,8),'YYYY-MM-DD') < DC.EndDate
+                          AND SUBSTR(CO_NAME_OR_CIK, 1,1) <> '0'
+    """.format(self.batch_number)
+    print(financial_load_query2)
+
+    with oracledb.connect(
+            user=self.oracle_user, password=self.oracle_pwd,
+            dsn=self.oracle_host + '/' + self.oracle_db) as connection:
+      with connection.cursor() as cursor:
+        cursor.execute(financial_load_query)
+        cursor.execute(financial_load_query2)
+      connection.commit()
 
   def load_staging_trade_history(self):
     """
