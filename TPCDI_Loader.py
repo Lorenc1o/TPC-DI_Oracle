@@ -346,6 +346,21 @@ class TPCDI_Loader():
       connection.commit()
     print('Done.')
 
+  def load_new_account(self):
+    """
+    Load NEW accounts in S_Account into DimAccount table in the target database.
+    """
+    print('Loading new accounts...')
+    # First, we insert all NEW rows from S_Account into DimAccount
+    load_query = """
+      INSERT INTO DimAccount (AccountID, SK_BrokerID, SK_CustomerID, Status, AccountDesc, TaxStatus, IsCurrent, BatchID, EffectiveDate, EndDate)
+      SELECT A.AccountID, A.SK_BrokerID, A.SK_CustomerID, A.Status, A.AccountDesc, A.TaxStatus, A.IsCurrent, A.BatchID, A.EffectiveDate, A.EndDate
+      FROM S_Account A
+      JOIN BROKER B ON A.SK_BrokerID = B.BrokerID
+      WHERE A.ActionType = 'NEW'
+    """
+    print('Done.')
+
   def load_update_customer(self):
     # Now we update all fields in the DimCustomer table with the latest values from S_Customer
     print('Updating DimCustomer table...')
@@ -355,20 +370,20 @@ class TPCDI_Loader():
         SELECT MAX(%s)
         FROM S_Customer C1
         WHERE C1.CustomerID = C.CustomerID AND
-          C1.ActionType IN ('NEW', 'UPDCUST') AND
+          C1.ActionType = 'UPDCUST' AND
           NOT EXISTS (
             SELECT * FROM S_Customer C2 
             WHERE C2.CustomerID = C1.CustomerID 
-            AND C2.ActionType IN ('NEW', 'UPDCUST') AND C2.EffectiveDate > C1.EffectiveDate)
+            AND C2.ActionType = 'UPDCUST' AND C2.EffectiveDate > C1.EffectiveDate)
       )
       WHERE EXISTS (
         SELECT * FROM S_Customer C1
         WHERE C1.CustomerID = C.CustomerID AND
-          C1.ActionType IN ('NEW', 'UPDCUST') AND
+          C1.ActionType = 'UPDCUST' AND
           NOT EXISTS (
             SELECT * FROM S_Customer C2
             WHERE C2.CustomerID = C1.CustomerID AND
-              C2.ActionType IN ('NEW', 'UPDCUST') AND C2.EffectiveDate > C1.EffectiveDate)
+              C2.ActionType = 'UPDCUST' AND C2.EffectiveDate > C1.EffectiveDate)
       )
     """
     update_query_status = base_update_query % ('C.Status', 'C.Status')
@@ -438,11 +453,11 @@ class TPCDI_Loader():
                     TRIM(UPPER(P.PostalCode)) = TRIM(UPPER(C.PostalCode))
                 ) CP)
       WHERE C1.CustomerID = C.CustomerID AND
-        C1.ActionType IN ('NEW', 'UPDCUST') AND
+        C1.ActionType = 'UPDCUST' AND
         NOT EXISTS (
           SELECT * FROM S_Customer C2
           WHERE C2.CustomerID = C1.CustomerID AND
-            C2.ActionType IN ('NEW', 'UPDCUST') AND C2.EffectiveDate > C1.EffectiveDate)
+            C2.ActionType = UPDCUST' AND C2.EffectiveDate > C1.EffectiveDate)
       )
     """
     with oracledb.connect(
@@ -508,18 +523,6 @@ class TPCDI_Loader():
       with connection.cursor() as cursor:
         cursor.execute(update_query_end_date)
       connection.commit()
-    print('Done.')
-
-
-
-  def load_new_account(self):
-    """
-    Load NEW rows in S_Account into DimAccount table in the target database.
-    """
-    print('Loading new accounts...')
-    # First, we insert all NEW rows from S_Account into DimAccount
-    load_query = """
-    """
     print('Done.')
   
   def load_staging_broker(self):
