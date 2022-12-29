@@ -1128,10 +1128,16 @@ class TPCDI_Loader():
     """
     Create Financial table in the staging database and then load rows by ..
     """
+
+    query = """
+    ALTER SESSION SET NLS_NUMERIC_CHARACTERS = ".,"
+    """.format(self.batch_number)
+    print(query)
+
     # Create query to load text data into financial table
     financial_load_query="""
     INSERT INTO Financial
-      SELECT SK_CompanyID, SF.YEAR, SF.QUARTER, SF.QTR_START_DATE, SF.REVENUE,  SF.EARNINGS, SF.EPS, SF.DILUTED_EPS,SF.MARGIN, SF.INVENTORY, SF.ASSETS, SF.LIABILITIES, SF.SH_OUT, SF.DILUTED_SH_OUT
+      SELECT SK_CompanyID, SF.YEAR, SF.QUARTER, TO_DATE(SF.QTR_START_DATE, 'YYYY-MM-DD'), SF.REVENUE,  SF.EARNINGS, SF.EPS, SF.DILUTED_EPS,SF.MARGIN, SF.INVENTORY, SF.ASSETS, SF.LIABILITIES, SF.SH_OUT, SF.DILUTED_SH_OUT
       FROM S_Financial SF
       JOIN DimCompany DC ON DC.SK_CompanyID = cast(SF.CO_NAME_OR_CIK as INT)
                           AND DC.EffectiveDate <= TO_DATE(SUBSTR(SF.PTS, 1,8),'YYYY-MM-DD')
@@ -1141,7 +1147,7 @@ class TPCDI_Loader():
     print(financial_load_query)
     financial_load_query2="""
     INSERT INTO Financial
-      SELECT SK_CompanyID, SF.YEAR, SF.QUARTER, SF.QTR_START_DATE, SF.REVENUE,  SF.EARNINGS, SF.EPS, SF.DILUTED_EPS,SF.MARGIN, SF.INVENTORY, SF.ASSETS, SF.LIABILITIES, SF.SH_OUT, SF.DILUTED_SH_OUT
+      SELECT SK_CompanyID, SF.YEAR, SF.QUARTER, TO_DATE(SF.QTR_START_DATE, 'YYYY-MM-DD'), SF.REVENUE,  SF.EARNINGS, SF.EPS, SF.DILUTED_EPS,SF.MARGIN, SF.INVENTORY, SF.ASSETS, SF.LIABILITIES, SF.SH_OUT, SF.DILUTED_SH_OUT
       FROM S_Financial SF
       JOIN DimCompany DC ON RTRIM(SF.CO_NAME_OR_CIK) = DC.Name
                           AND DC.EffectiveDate <= TO_DATE(SUBSTR(SF.PTS, 1,8),'YYYY-MM-DD')
@@ -1154,6 +1160,7 @@ class TPCDI_Loader():
             user=self.oracle_user, password=self.oracle_pwd,
             dsn=self.oracle_host + '/' + self.oracle_db) as connection:
       with connection.cursor() as cursor:
+        cursor.execute(query)
         cursor.execute(financial_load_query)
         cursor.execute(financial_load_query2)
       connection.commit()
