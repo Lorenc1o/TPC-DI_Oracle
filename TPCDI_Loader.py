@@ -465,12 +465,14 @@ class TPCDI_Loader():
                     TRIM(UPPER(P.AddressLine2)) = TRIM(UPPER(C.AddressLine2)) AND
                     TRIM(UPPER(P.PostalCode)) = TRIM(UPPER(C.PostalCode))
                 ) CP)
-      WHERE C1.CustomerID = C.CustomerID AND
-        C1.ActionType = 'UPDCUST' AND
-        NOT EXISTS (
-          SELECT * FROM S_Customer C2
-          WHERE C2.CustomerID = C1.CustomerID AND
-            C2.ActionType = UPDCUST' AND C2.EffectiveDate > C1.EffectiveDate)
+      WHERE EXISTS (
+        SELECT * FROM S_Customer C1
+        WHERE C1.CustomerID = C.CustomerID AND
+          C1.ActionType = 'UPDCUST' AND
+          NOT EXISTS (
+            SELECT * FROM S_Customer C2
+            WHERE C2.CustomerID = C1.CustomerID AND
+              C2.ActionType = 'UPDCUST' AND C2.EffectiveDate > C1.EffectiveDate)
       )
     """
     with oracledb.connect(
