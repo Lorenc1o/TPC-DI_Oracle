@@ -63,6 +63,7 @@ if __name__ == "__main__":
             loader.load_prospect()
             loader.load_staging_customer()
             loader.load_new_customer()
+            loader.update_prospect()
             # loader.load_broker()
     end = time.time()
     print(end-start)

@@ -387,7 +387,27 @@ class TPCDI_Loader():
         cursor.execute(update_query_end_date)
       connection.commit()
             
-  
+  def update_prospect(self):
+    upd_query = """
+      UPDATE Prospect P
+      SET P.IsCustomer  = 'true'
+      WHERE EXISTS (
+        SELECT *
+        FROM DimCustomer C
+        WHERE UPPER(P.LastName) = UPPER(C.LastName) AND
+              TRIM(UPPER(P.AddressLine1)) = TRIM(UPPER(C.AddressLine1)) AND
+              TRIM(UPPER(P.AddressLine2)) = TRIM(UPPER(C.AddressLine2)) AND
+              TRIM(UPPER(P.PostalCode)) = TRIM(UPPER(C.PostalCode))
+      )
+    """
+    print(upd_query)
+    with oracledb.connect(
+      user=self.oracle_user, password=self.oracle_pwd, 
+      dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+      with connection.cursor() as cursor:
+        cursor.execute(upd_query)
+      connection.commit()
+
   def load_staging_broker(self):
     """
     Load rows in HR.csv into S_Broker table in staging database.
@@ -473,7 +493,7 @@ class TPCDI_Loader():
         RETURN SUBSTR(marketing_template, 1, LENGTH(marketing_template) - 1);
     END;
     """
-    #TODO: Change IsCustomer when staging customer is implemented
+
     load_prospect_query = """   
     INSERT INTO Prospect
     SELECT SP.AGENCY_ID, (SELECT SK_DateID FROM DimDate WHERE DateValue IN (SELECT BatchDate FROM BatchDate WHERE BatchNumber = {0})) SK_RecordDateID,
