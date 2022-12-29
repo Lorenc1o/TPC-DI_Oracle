@@ -269,7 +269,7 @@ class TPCDI_Loader():
         if a_id is not None:
           print(a_id)
           insert_account = f"""
-          INSERT INTO S_Account (ActionType, AccountID, Status, BrokerID AccountDesc, TaxStatus, EffectiveDate, EndDate, BatchId)
+          INSERT INTO S_Account (ActionType, AccountID, Status, BrokerID, AccountDesc, TaxStatus, EffectiveDate, EndDate, BatchId)
           VALUES ('{char_insert(action_type)}', {a_id}, 'Active', '{char_insert(a_brokerID)}', '{char_insert(a_Desc)}', '{char_insert(a_taxStatus)}',
             TO_DATE('{char_insert(action_ts_date)}', 'yyyy-mm-dd'), TO_DATE('9999-12-31', 'yyyy-mm-dd'), {self.batch_number})
           """
