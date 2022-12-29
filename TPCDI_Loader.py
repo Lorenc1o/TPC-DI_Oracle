@@ -370,13 +370,36 @@ class TPCDI_Loader():
       SELECT A.AccountID, CP.SK_BrokerID, CP.SK_CustomerID, A.Status, A.AccountDesc, A.TaxStatus, 'true', A.BatchID, A.EffectiveDate, A.EndDate
       FROM S_Account A
       LEFT OUTER JOIN Copied CP ON (A.AccountID = CP.AccountID)
-      WHERE A.ActionType = IN ('NEW', 'ADDACCT')
+      WHERE A.ActionType IN ('NEW', 'ADDACCT')
     """
     with oracledb.connect(
       user=self.oracle_user, password=self.oracle_pwd, 
       dsn=self.oracle_host+'/'+self.oracle_db) as connection:
       with connection.cursor() as cursor:
         cursor.execute(load_query)
+      connection.commit()
+    print('Done.')
+
+  def create_trigger_UPD_customer_account(self):
+    """
+    Create a trigger that will update the DimAccount table when a customer is updated.
+    """
+    print('Creating trigger UPD_CUSTOMER_ACCOUNT...')
+    create_trigger_query = """
+      CREATE OR REPLACE TRIGGER UPD_CUSTOMER_ACCOUNT
+      AFTER UPDATE OF SK_CustomerID ON DimAccount
+      FOR EACH ROW
+      BEGIN
+        UPDATE DimAccount
+        SET SK_CustomerID = :new.SK_CustomerID
+        WHERE AccountID = :old.AccountID;
+      END;
+    """
+    with oracledb.connect(
+      user=self.oracle_user, password=self.oracle_pwd, 
+      dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+      with connection.cursor() as cursor:
+        cursor.execute(create_trigger_query)
       connection.commit()
     print('Done.')
 
@@ -405,28 +428,28 @@ class TPCDI_Loader():
               C2.ActionType = 'UPDCUST' AND C2.EffectiveDate > C1.EffectiveDate)
       )
     """
-    update_query_status = base_update_query % ('C.Status', 'C.Status')
-    update_query_last_name = base_update_query % ('C.LastName', 'C.LastName')
-    update_query_first_name = base_update_query % ('C.FirstName', 'C.FirstName')
-    update_query_middle_initial = base_update_query % ('C.MiddleInitial', 'C.MiddleInitial')
-    update_query_gender = base_update_query % ('C.Gender', 'C.Gender')
-    update_query_tier = base_update_query % ('C.Tier', 'C.Tier')
-    update_query_dob = base_update_query % ('C.DOB', 'C.DOB')
-    update_query_address_line1 = base_update_query % ('C.AddressLine1', 'C.AddressLine1')
-    update_query_address_line2 = base_update_query % ('C.AddressLine2', 'C.AddressLine2')
-    update_query_postal_code = base_update_query % ('C.PostalCode', 'C.PostalCode')
-    update_query_city = base_update_query % ('C.City', 'C.City')
-    update_query_state_prov = base_update_query % ('C.StateProv', 'C.StateProv')
-    update_query_country = base_update_query % ('C.Country', 'C.Country')
-    update_query_phone1 = base_update_query % ('C.Phone1', 'C.Phone1')
-    update_query_phone2 = base_update_query % ('C.Phone2', 'C.Phone2')
-    update_query_phone3 = base_update_query % ('C.Phone3', 'C.Phone3')
-    update_query_email1 = base_update_query % ('C.Email1', 'C.Email1')
-    update_query_email2 = base_update_query % ('C.Email2', 'C.Email2')
-    update_query_national_tax_rate_desc = base_update_query % ('C.NationalTaxRateDesc', 'C.NationalTaxRateDesc')
-    update_query_national_tax_rate = base_update_query % ('C.NationalTaxRate', 'C.NationalTaxRate')
-    update_query_local_tax_rate_desc = base_update_query % ('C.LocalTaxRateDesc', 'C.LocalTaxRateDesc')
-    update_query_local_tax_rate = base_update_query % ('C.LocalTaxRate', 'C.LocalTaxRate')
+    update_query_status = base_update_query % ('C.Status', 'C1.Status')
+    update_query_last_name = base_update_query % ('C.LastName', 'C1.LastName')
+    update_query_first_name = base_update_query % ('C.FirstName', 'C1.FirstName')
+    update_query_middle_initial = base_update_query % ('C.MiddleInitial', 'C1.MiddleInitial')
+    update_query_gender = base_update_query % ('C.Gender', 'C1.Gender')
+    update_query_tier = base_update_query % ('C.Tier', 'C1.Tier')
+    update_query_dob = base_update_query % ('C.DOB', 'C1.DOB')
+    update_query_address_line1 = base_update_query % ('C.AddressLine1', 'C1.AddressLine1')
+    update_query_address_line2 = base_update_query % ('C.AddressLine2', 'C1.AddressLine2')
+    update_query_postal_code = base_update_query % ('C.PostalCode', 'C1.PostalCode')
+    update_query_city = base_update_query % ('C.City', 'C1.City')
+    update_query_state_prov = base_update_query % ('C.StateProv', 'C1.StateProv')
+    update_query_country = base_update_query % ('C.Country', 'C1.Country')
+    update_query_phone1 = base_update_query % ('C.Phone1', 'C1.Phone1')
+    update_query_phone2 = base_update_query % ('C.Phone2', 'C1.Phone2')
+    update_query_phone3 = base_update_query % ('C.Phone3', 'C1.Phone3')
+    update_query_email1 = base_update_query % ('C.Email1', 'C1.Email1')
+    update_query_email2 = base_update_query % ('C.Email2', 'C1.Email2')
+    update_query_national_tax_rate_desc = base_update_query % ('C.NationalTaxRateDesc', 'C1.NationalTaxRateDesc')
+    update_query_national_tax_rate = base_update_query % ('C.NationalTaxRate', 'C1.NationalTaxRate')
+    update_query_local_tax_rate_desc = base_update_query % ('C.LocalTaxRateDesc', 'C1.LocalTaxRateDesc')
+    update_query_local_tax_rate = base_update_query % ('C.LocalTaxRate', 'C1.LocalTaxRate')
 
     # To finalize the update, we need to update the values from Prospect
     base_update_prospect_query = """
@@ -519,6 +542,69 @@ class TPCDI_Loader():
       connection.commit()
     print('Done.')
 
+  def load_update_account(self):
+    # Now we update the DimAccount table
+    print('Updating accounts...')
+    base_update_query = """
+    UPDATE DimAccount A
+      SET A.%s = (
+        SELECT MAX(A1.%s)
+        FROM S_Account A1
+        WHERE A1.AccountID = A.AccountID AND
+          A1.ActionType = 'UPDACCT' AND
+          NOT EXISTS (
+            SELECT * FROM S_Account A2
+            WHERE A2.AccountID = A1.AccountID AND
+              A2.ActionType = 'UPDACCT' AND A2.EffectiveDate > A1.EffectiveDate)
+      )
+      WHERE EXISTS (
+        SELECT * FROM S_Account A1
+        WHERE A1.AccountID = A.AccountID AND
+          A1.ActionType = 'UPDACCT' AND
+          NOT EXISTS (
+            SELECT * FROM S_Account A2
+            WHERE A2.AccountID = A1.AccountID AND
+              A2.ActionType = 'UPDACCT' AND A2.EffectiveDate > A1.EffectiveDate)
+      )
+    """
+    update_query_status = base_update_query % ('Status', 'Status')
+    update_query_account_desc = base_update_query % ('AccountDesc', 'AccountDesc')
+    update_query_account_taxstatus = base_update_query % ('TaxStatus', 'TaxStatus')
+    with oracledb.connect(
+      user=self.oracle_user, password=self.oracle_pwd, 
+      dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+      with connection.cursor() as cursor:
+        cursor.execute(update_query_status)
+        cursor.execute(update_query_account_desc)
+        cursor.execute(update_query_account_taxstatus)
+      connection.commit()
+    print('Done.')
+
+  def load_close_account(self):
+    # Now, we update the Status field for all rows in the DimAccount table
+    # for which there is a row in S_Account with an ActionType of 'CLOSEACCT'
+    print('Closing accounts...')
+    update_query_status = """
+      UPDATE DimAccount A
+      SET A.Status = 'Inactive'
+      WHERE EXISTS (
+        SELECT * FROM S_Account A1
+        WHERE A1.AccountID = A.AccountID AND
+          A1.ActionType = 'CLOSEACCT' AND
+          NOT EXISTS (
+            SELECT * FROM S_Account A2
+            WHERE A2.AccountID = A1.AccountID AND
+              A2.ActionType = 'UPDACCT' AND A2.EffectiveDate > A1.EffectiveDate)
+      )
+    """
+    with oracledb.connect(
+      user=self.oracle_user, password=self.oracle_pwd, 
+      dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+      with connection.cursor() as cursor:
+        cursor.execute(update_query_status)
+      connection.commit()
+    print('Done.')
+
   def load_inact_customer(self):
     # Finally, we update the EndDate field and the isCurrent field for all rows in the DimCustomer table
     # for which there is a row in S_Customer with an ActionType of 'INACT'
@@ -544,6 +630,42 @@ class TPCDI_Loader():
             SELECT * FROM S_Customer C2
             WHERE C2.CustomerID = C1.CustomerID AND
               C2.ActionType = 'INACT' AND C2.EffectiveDate > C1.EffectiveDate)
+      )
+    """
+    with oracledb.connect(
+      user=self.oracle_user, password=self.oracle_pwd, 
+      dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+      with connection.cursor() as cursor:
+        cursor.execute(update_query_end_date)
+      connection.commit()
+    print('Done.')
+  
+  def load_inact_account(self):
+    # Finally, we update the EndDate field, the Status and the isCurrent field for all rows in the DimAccount table
+    # for which there is a row in S_Account with an ActionType of 'INACT'
+    print('Updating inactive accounts...')
+    update_query_end_date = """
+      UPDATE DimAccount A
+      SET A.EndDate = (
+        SELECT MAX(A1.EffectiveDate)
+        FROM S_Account A1
+        WHERE A1.AccountID = A.AccountID AND
+          A1.ActionType = 'INACT' AND
+          NOT EXISTS (
+            SELECT * FROM S_Account A2
+            WHERE A2.AccountID = A1.AccountID AND
+              A2.ActionType = 'INACT' AND A2.EffectiveDate > A1.EffectiveDate)
+      ),
+      A.Status = 'Inactive',
+      A.isCurrent = 'false'
+      WHERE EXISTS (
+        SELECT * FROM S_Account A1
+        WHERE A1.AccountID = A.AccountID AND
+          A1.ActionType = 'INACT' AND
+          NOT EXISTS (
+            SELECT * FROM S_Account A2
+            WHERE A2.AccountID = A1.AccountID AND
+              A2.ActionType = 'INACT' AND A2.EffectiveDate > A1.EffectiveDate)
       )
     """
     with oracledb.connect(
