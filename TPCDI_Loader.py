@@ -246,7 +246,7 @@ class TPCDI_Loader():
           customer_inserts.append(insert_customer)
         # Account fields
         try:
-          a_id = action['Customer']['Account']['@AccountID']
+          a_id = action['Customer']['Account']['@CA_ID']
         except:
           a_id = None
         try:
@@ -254,7 +254,7 @@ class TPCDI_Loader():
         except:
           a_Desc = None
         try:
-          a_taxStatus = action['Customer']['Account']['CA_TAX_ST']
+          a_taxStatus = action['Customer']['Account']['@CA_TAX_ST']
         except:
           a_taxStatus = None
         try:
@@ -404,10 +404,10 @@ class TPCDI_Loader():
               P.AgencyID = CP.Agency
           )
     """
-    update_query_agency_id = base_update_prospect_query % ('AgencyID', 'AgencyID')
-    update_query_credit_rating = base_update_prospect_query % ('CreditRating', 'CreditRating')
-    update_query_net_worth = base_update_prospect_query % ('NetWorth', 'NetWorth')
-    update_query_marketing_nameplate = base_update_prospect_query % ('MarketingNameplate', 'MarketingNameplate')
+    update_query_agency_id = base_update_prospect_query % ('AgencyID', 'AgencyID', 'AgencyID')
+    update_query_credit_rating = base_update_prospect_query % ('CreditRating', 'CreditRating', 'CreditRating')
+    update_query_net_worth = base_update_prospect_query % ('NetWorth', 'NetWorth', 'NetWorth')
+    update_query_marketing_nameplate = base_update_prospect_query % ('MarketingNameplate', 'MarketingNameplate', 'MarketingNameplate')
 
     with oracledb.connect(
       user=self.oracle_user, password=self.oracle_pwd, 
