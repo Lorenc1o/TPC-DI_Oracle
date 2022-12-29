@@ -553,6 +553,7 @@ class TPCDI_Loader():
         SELECT MAX(A1.%s)
         FROM S_Account A1
         WHERE A1.AccountID = A.AccountID AND
+          A1.%s IS NOT NULL AND
           A1.ActionType = 'UPDACCT' AND
           NOT EXISTS (
             SELECT * FROM S_Account A2
@@ -562,6 +563,7 @@ class TPCDI_Loader():
       WHERE EXISTS (
         SELECT * FROM S_Account A1
         WHERE A1.AccountID = A.AccountID AND
+          A1.%s IS NOT NULL AND
           A1.ActionType = 'UPDACCT' AND
           NOT EXISTS (
             SELECT * FROM S_Account A2
@@ -569,9 +571,9 @@ class TPCDI_Loader():
               A2.ActionType = 'UPDACCT' AND A2.EffectiveDate > A1.EffectiveDate)
       )
     """
-    update_query_status = base_update_query % ('Status', 'Status')
-    update_query_account_desc = base_update_query % ('AccountDesc', 'AccountDesc')
-    update_query_account_taxstatus = base_update_query % ('TaxStatus', 'TaxStatus')
+    update_query_status = base_update_query % ('Status', 'Status', 'Status', 'Status')
+    update_query_account_desc = base_update_query % ('AccountDesc', 'AccountDesc', 'AccountDesc', 'AccountDesc')
+    update_query_account_taxstatus = base_update_query % ('TaxStatus', 'TaxStatus', 'TaxStatus', 'TaxStatus')
     with oracledb.connect(
       user=self.oracle_user, password=self.oracle_pwd, 
       dsn=self.oracle_host+'/'+self.oracle_db) as connection:
