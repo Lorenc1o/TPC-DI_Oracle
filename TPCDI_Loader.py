@@ -231,18 +231,19 @@ class TPCDI_Loader():
             action_ts_date = action['@ActionTS'][0:10]
           except:
             action_ts_date = None
-        insert_customer = f"""
-        INSERT INTO S_Customer (ActionType, CustomerID, TaxID, Status, LastName, FirstName, MiddleInitial, Gender, Tier, DOB, AddressLine1, AddressLine2, PostalCode,
-          City, StateProv, Country, Phone1, Phone2, Phone3, Email1, Email2, NationalTaxRateDesc, NationalTaxRate, LocalTaxRateDesc, LocalTaxRate, EffectiveDate, EndDate, BatchId)
-        VALUES ('{char_insert(action_type)}', {c_id}, '{char_insert(c_tax_id)}', '{char_insert(c_status)}', '{char_insert(c_l_name)}', '{char_insert(c_f_name)}', '{char_insert(c_m_name)}', 
-          '{char_insert(c_gndr)}', {c_tier}, TO_DATE('{char_insert(c_dob)}', 'yyyy-mm-dd'), '{char_insert(c_adline1)}', '{char_insert(c_adline2)}', '{char_insert(c_zipcode)}', 
-          '{char_insert(c_city)}', '{char_insert(c_state_prov)}', '{char_insert(c_ctry)}', '{char_insert(phone_numbers[0])}', '{char_insert(phone_numbers[1])}', 
-          '{char_insert(phone_numbers[2])}', '{char_insert(c_prim_email)}', '{char_insert(c_alt_email)}', 
-          (SELECT TX_NAME FROM TaxRate WHERE TX_ID = '{char_insert(c_nat_tx_id)}'), (SELECT TX_RATE FROM TaxRate WHERE TX_ID = '{char_insert(c_nat_tx_id)}'),
-          (SELECT TX_NAME FROM TaxRate WHERE TX_ID = '{char_insert(c_lcl_tx_id)}'), (SELECT TX_RATE FROM TaxRate WHERE TX_ID = '{char_insert(c_lcl_tx_id)}'),
-          TO_DATE('{char_insert(action_ts_date)}', 'yyyy-mm-dd'), TO_DATE('9999-12-31', 'yyyy-mm-dd'), {self.batch_number})
-        """
-        customer_inserts.append(insert_customer)
+        if c_id is not None:
+          insert_customer = f"""
+          INSERT INTO S_Customer (ActionType, CustomerID, TaxID, Status, LastName, FirstName, MiddleInitial, Gender, Tier, DOB, AddressLine1, AddressLine2, PostalCode,
+            City, StateProv, Country, Phone1, Phone2, Phone3, Email1, Email2, NationalTaxRateDesc, NationalTaxRate, LocalTaxRateDesc, LocalTaxRate, EffectiveDate, EndDate, BatchId)
+          VALUES ('{char_insert(action_type)}', {c_id}, '{char_insert(c_tax_id)}', '{char_insert(c_status)}', '{char_insert(c_l_name)}', '{char_insert(c_f_name)}', '{char_insert(c_m_name)}', 
+            '{char_insert(c_gndr)}', {c_tier}, TO_DATE('{char_insert(c_dob)}', 'yyyy-mm-dd'), '{char_insert(c_adline1)}', '{char_insert(c_adline2)}', '{char_insert(c_zipcode)}', 
+            '{char_insert(c_city)}', '{char_insert(c_state_prov)}', '{char_insert(c_ctry)}', '{char_insert(phone_numbers[0])}', '{char_insert(phone_numbers[1])}', 
+            '{char_insert(phone_numbers[2])}', '{char_insert(c_prim_email)}', '{char_insert(c_alt_email)}', 
+            (SELECT TX_NAME FROM TaxRate WHERE TX_ID = '{char_insert(c_nat_tx_id)}'), (SELECT TX_RATE FROM TaxRate WHERE TX_ID = '{char_insert(c_nat_tx_id)}'),
+            (SELECT TX_NAME FROM TaxRate WHERE TX_ID = '{char_insert(c_lcl_tx_id)}'), (SELECT TX_RATE FROM TaxRate WHERE TX_ID = '{char_insert(c_lcl_tx_id)}'),
+            TO_DATE('{char_insert(action_ts_date)}', 'yyyy-mm-dd'), TO_DATE('9999-12-31', 'yyyy-mm-dd'), {self.batch_number})
+          """
+          customer_inserts.append(insert_customer)
         # Account fields
         try:
           a_id = action['Account']['@AccountID']
@@ -261,12 +262,13 @@ class TPCDI_Loader():
           action_ts_date = action['@ActionTS'][0:10]
         except:
           action_ts_date = None
-        insert_account = f"""
-        INSERT INTO S_Account (ActionType, AccountID, Status, AccountDesc, TaxStatus, EffectiveDate, EndDate, BatchId)
-        VALUES ('{char_insert(action_type)}', {a_id}, 'Active', '{char_insert(a_Desc)}', '{char_insert(a_taxStatus)}',
-          TO_DATE('{char_insert(action_ts_date)}', 'yyyy-mm-dd'), TO_DATE('9999-12-31', 'yyyy-mm-dd'), {self.batch_number})
-        """
-        account_inserts.append(insert_account)
+        if a_id is not None:
+          insert_account = f"""
+          INSERT INTO S_Account (ActionType, AccountID, Status, AccountDesc, TaxStatus, EffectiveDate, EndDate, BatchId)
+          VALUES ('{char_insert(action_type)}', {a_id}, 'Active', '{char_insert(a_Desc)}', '{char_insert(a_taxStatus)}',
+            TO_DATE('{char_insert(action_ts_date)}', 'yyyy-mm-dd'), TO_DATE('9999-12-31', 'yyyy-mm-dd'), {self.batch_number})
+          """
+          account_inserts.append(insert_account)
 
         if len(customer_inserts) + len(account_inserts) >= max_packet:
                 # Create query to load text data into tradeType table
