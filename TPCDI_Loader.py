@@ -246,17 +246,21 @@ class TPCDI_Loader():
           customer_inserts.append(insert_customer)
         # Account fields
         try:
-          a_id = action['Account']['@AccountID']
+          a_id = action['Customer']['Account']['@AccountID']
         except:
           a_id = None
         try:
-          a_Desc = action['Account']['CA_NAME']
+          a_Desc = action['Customer']['Account']['CA_NAME']
         except:
           a_Desc = None
         try:
-          a_taxStatus = action['Account']['CA_TAX_ST']
+          a_taxStatus = action['Customer']['Account']['CA_TAX_ST']
         except:
           a_taxStatus = None
+        try:
+          a_brokerID = action['Customer']['Account']['CA_B_ID']
+        except:
+          a_brokerID = None
         # action_type we have it already
         try:
           action_ts_date = action['@ActionTS'][0:10]
@@ -265,8 +269,8 @@ class TPCDI_Loader():
         if a_id is not None:
           print(a_id)
           insert_account = f"""
-          INSERT INTO S_Account (ActionType, AccountID, Status, AccountDesc, TaxStatus, EffectiveDate, EndDate, BatchId)
-          VALUES ('{char_insert(action_type)}', {a_id}, 'Active', '{char_insert(a_Desc)}', '{char_insert(a_taxStatus)}',
+          INSERT INTO S_Account (ActionType, AccountID, Status, BrokerID AccountDesc, TaxStatus, EffectiveDate, EndDate, BatchId)
+          VALUES ('{char_insert(action_type)}', {a_id}, 'Active', '{char_insert(a_brokerID)}', '{char_insert(a_Desc)}', '{char_insert(a_taxStatus)}',
             TO_DATE('{char_insert(action_ts_date)}', 'yyyy-mm-dd'), TO_DATE('9999-12-31', 'yyyy-mm-dd'), {self.batch_number})
           """
           account_inserts.append(insert_account)

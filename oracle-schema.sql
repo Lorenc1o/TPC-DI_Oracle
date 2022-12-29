@@ -396,8 +396,9 @@ CREATE TABLE S_Broker(
     EmployeePhone CHAR(14)
 );
 
-CREATE TABLE S_ACCOUNT ( SK_AccountID  NUMBER(11,0),
+CREATE TABLE S_Account ( SK_AccountID  NUMBER(11,0),
 						AccountID  NUMBER(11,0),
+						BrokerID  NUMBER(11,0),
 						Status       CHAR(10) NOT NULL,
 						AccountDesc       varchar(50),
 						TaxStatus NUMBER(1,0),
