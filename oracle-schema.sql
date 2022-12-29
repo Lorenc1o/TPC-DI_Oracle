@@ -141,12 +141,12 @@ CREATE TABLE DimTime ( SK_TimeID NUMBER(11,0) PRIMARY KEY,
 
 CREATE TABLE DimTrade (	TradeID NUMBER(11,0) Not NULL,
 						SK_BrokerID NUMBER(11,0) REFERENCES DimBroker (SK_BrokerID),
-						SK_CreateDateID NUMBER(11,0) Not NULL REFERENCES DimDate (SK_DateID),
-						SK_CreateTimeID NUMBER(11,0) Not NULL REFERENCES DimTime (SK_TimeID),
+						SK_CreateDateID NUMBER(11,0) REFERENCES DimDate (SK_DateID),
+						SK_CreateTimeID NUMBER(11,0) REFERENCES DimTime (SK_TimeID),
 						SK_CloseDateID NUMBER(11,0) REFERENCES DimDate (SK_DateID),
 						SK_CloseTimeID NUMBER(11,0) REFERENCES DimTime (SK_TimeID),
 						Status CHAR(10) Not NULL,
-						DT_Type CHAR(12) Not NULL,
+						Type CHAR(12) Not NULL,
 						CashFlag CHAR(5) NOT NULL check (CashFlag = 'false' or CashFlag = 'true'),
 						SK_SecurityID NUMBER(11,0) Not NULL REFERENCES DimSecurity (SK_SecurityID),
 						SK_CompanyID NUMBER(11,0) Not NULL REFERENCES DimCompany (SK_CompanyID),
@@ -438,6 +438,31 @@ CREATE TABLE S_Customer  (  ActionType CHAR(10),
 							EffectiveDate date,
 							EndDate date
 );
+
+CREATE TABLE S_Trade (
+      cdc_flag CHAR(1),
+      cdc_dsn NUMBER(12),
+      t_id NUMBER(15),
+      t_dts DATE,
+      t_st_id CHAR(4),
+      t_tt_id CHAR(3),
+      t_is_cash CHAR(3),
+      t_s_symb CHAR(15) NOT NULL,
+      t_qty NUMBER(6) NOT NULL,
+      t_bid_price NUMBER(8),
+      t_ca_id NUMBER(11),
+      t_exec_name CHAR(49),
+      t_trade_price NUMBER(8),
+      t_chrg NUMBER(10),
+      t_comm NUMBER(10),
+      t_tax NUMBER(10)
+);
+    
+CREATE TABLE S_Trade_History (
+    th_t_id NUMBER(15),
+    th_dts DATE,
+    th_st_id CHAR(4)
+);    
 -- CREATE INDEX PIndex ON dimtrade (tradeid);
 -- CREATE TABLE dimtradeforexperiment
 -- (

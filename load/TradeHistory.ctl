@@ -1,0 +1,8 @@
+LOAD DATA 
+INTO TABLE S_Trade_History 
+FIELDS TERMINATED BY '|' OPTIONALLY ENCLOSED BY '"' TRAILING NULLCOLS
+(
+    th_t_id,
+    th_dts DATE "YYYY-MM-DD HH24:MI:SS",
+    th_st_id
+)
