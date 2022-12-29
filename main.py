@@ -54,8 +54,8 @@ if __name__ == "__main__":
             # loader.load_staging_broker()
             # loader.load_staging_cash_balances()
             # loader.load_staging_watches()
-            loader.load_staging_trade()
-            # loader.load_staging_trade_history()
+            # loader.load_staging_trade()
+            loader.load_staging_trade_history()
         
             # # Step 4: Load dependant table
             # loader.load_target_dim_company()

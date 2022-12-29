@@ -1288,29 +1288,11 @@ class TPCDI_Loader():
     """
     Create s_trade_history table in to the database and then load rows in TradeHistory.txt into it.
     """
-
-    # Create ddl to store tade_history
-    tade_history_ddl = """
-    USE """+self.db_name+""";
-
-    CREATE TABLE s_trade_history(
-      th_t_id NUMERIC(15),
-      th_dts DATETIME,
-      th_st_id CHAR(4)
-    );
-
-    """
-
-    # Create query to load text data into tade_history table
-    tade_history_load_query="LOAD DATA LOCAL INFILE '"+self.batch_dir+"TradeHistory.txt' INTO TABLE s_trade_history COLUMNS TERMINATED BY '|';"
-    
-    # Construct mysql client bash command to execute ddl and data loading query
-    # tade_history_ddl_cmd = TPCDI_Loader.BASE_SQL_CMD+" -D "+self.db_name+" -e \""+tade_history_ddl+"\""
-    # tade_history_load_cmd = TPCDI_Loader.BASE_SQL_CMD+" --local-infile=1 -D "+self.db_name+" -e \""+tade_history_load_query+"\""
-    
-    # Execute the command
-    os.system(tade_history_ddl_cmd)
-    os.system(tade_history_load_cmd)
+    print('Loading staging trade history...')
+    # Create query to load txt data into S_Trade table
+    cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/TradeHistory.ctl', self.batch_dir + 'TradeHistory.txt')
+    os.system(cmd)
+    print('Done.')
 
   def load_staging_trade(self):
     """

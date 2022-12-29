@@ -456,7 +456,13 @@ CREATE TABLE S_Trade (
       t_chrg NUMBER(10),
       t_comm NUMBER(10),
       t_tax NUMBER(10)
-    );
+);
+    
+CREATE TABLE S_Trade_History (
+    th_t_id NUMBER(15),
+    th_dts DATE,
+    th_st_id CHAR(4)
+);    
 -- CREATE INDEX PIndex ON dimtrade (tradeid);
 -- CREATE TABLE dimtradeforexperiment
 -- (
