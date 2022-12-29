@@ -1164,26 +1164,27 @@ class TPCDI_Loader():
     load_dim_security_query_1 = """
     INSERT INTO DimSecurity (Symbol,Issue,Status,Name,ExchangeID,SK_CompanyID,SharesOutstanding,FirstTrade,FirstTradeOnExchange,Dividend,IsCurrent,BatchID,EffectiveDate,EndDate)
     SELECT SS.SYMBOL,SS.ISSUE_TYPE, ST.ST_NAME, SS.NAME, SS.EX_ID, DC.SK_CompanyID, SS.SH_OUT, TO_DATE(SS.FIRST_TRADE_DATE,'YYYY-MM-DD'),
-          TO_DATE(FIRST_TRADE_EXCHANGE, 'YYYY-MM-DD'), SS.DIVIDEN, 'true', 1, TO_DATE(LPAD(SS.PTS,8),'YYYY-MM-DD'), TO_DATE('99991231','YYYY-MM-DD')
+          TO_DATE(FIRST_TRADE_EXCHANGE, 'YYYY-MM-DD'), SS.DIVIDEN, 'true', {0}, TO_DATE(LPAD(SS.PTS,8),'YYYY-MM-DD'), TO_DATE('99991231','YYYY-MM-DD')
     FROM S_Security SS
     JOIN StatusType ST ON SS.STATUS = ST.ST_ID
     JOIN DimCompany DC ON DC.SK_CompanyID = CAST(SS.COMPANY_NAME_OR_CIK AS INTEGER)
                         AND DC.EffectiveDate <= TO_DATE(LPAD(SS.PTS,8),'YYYY-MM-DD')
                         AND TO_DATE(LPAD(SS.PTS,8),'YYYY-MM-DD') < DC.EndDate
                         AND LPAD(SS.COMPANY_NAME_OR_CIK,1)='0'
-    """
+    """.format(self.batch_number)
 
     load_dim_security_query_2 = """                    
     INSERT INTO DimSecurity (Symbol,Issue,Status,Name,ExchangeID,SK_CompanyID,SharesOutstanding,FirstTrade,FirstTradeOnExchange,Dividend,IsCurrent,BatchID,EffectiveDate,EndDate)
     SELECT SS.SYMBOL,SS.ISSUE_TYPE, ST.ST_NAME, SS.NAME, SS.EX_ID, DC.SK_CompanyID, SS.SH_OUT, TO_DATE(SS.FIRST_TRADE_DATE,'YYYY-MM-DD'),
-          TO_DATE(FIRST_TRADE_EXCHANGE, 'YYYY-MM-DD'), SS.DIVIDEN, 'true', 1, TO_DATE(LPAD(SS.PTS,8),'YYYY-MM-DD'), TO_DATE('99991231','YYYY-MM-DD')
+          TO_DATE(FIRST_TRADE_EXCHANGE, 'YYYY-MM-DD'), SS.DIVIDEN, 'true', {0}, TO_DATE(LPAD(SS.PTS,8),'YYYY-MM-DD'), TO_DATE('99991231','YYYY-MM-DD')
     FROM S_Security SS
     JOIN StatusType ST ON SS.STATUS = ST.ST_ID
     JOIN DimCompany DC ON RTRIM(SS.COMPANY_NAME_OR_CIK) = DC.Name
                         AND DC.EffectiveDate <= TO_DATE(LPAD(SS.PTS,8),'YYYY-MM-DD')
                         AND TO_DATE(LPAD(SS.PTS,8),'YYYY-MM-DD') < DC.EndDate
                         AND LPAD(SS.COMPANY_NAME_OR_CIK,1) <> '0'
-    """
+    """.format(self.batch_number)
+
     create_sdc_dimsecurity_query = """                        
     CREATE TABLE sdc_dimsecurity
       (	SK_SECURITYID NUMBER(11,0), 
