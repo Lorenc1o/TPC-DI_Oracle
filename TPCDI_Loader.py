@@ -263,6 +263,7 @@ class TPCDI_Loader():
         except:
           action_ts_date = None
         if a_id is not None:
+          print(a_id)
           insert_account = f"""
           INSERT INTO S_Account (ActionType, AccountID, Status, AccountDesc, TaxStatus, EffectiveDate, EndDate, BatchId)
           VALUES ('{char_insert(action_type)}', {a_id}, 'Active', '{char_insert(a_Desc)}', '{char_insert(a_taxStatus)}',
