@@ -399,6 +399,7 @@ CREATE TABLE S_Broker(
 CREATE TABLE S_Account ( SK_AccountID  NUMBER(11,0),
 						AccountID  NUMBER(11,0),
 						BrokerID  NUMBER(11,0),
+						CustomerID NUMBER(11,0),
 						Status       CHAR(10) NOT NULL,
 						AccountDesc       varchar(50),
 						TaxStatus NUMBER(1,0),

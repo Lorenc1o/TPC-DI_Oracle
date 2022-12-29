@@ -282,8 +282,8 @@ class TPCDI_Loader():
           action_ts_date = None
         if a_id is not None:
           insert_account = f"""
-          INSERT INTO S_Account (ActionType, AccountID, Status, BrokerID, AccountDesc, TaxStatus, EffectiveDate, EndDate, BatchId)
-          VALUES ('{char_insert(action_type)}', {a_id}, 'Active', '{char_insert(a_brokerID)}', '{char_insert(a_Desc)}', '{char_insert(a_taxStatus)}',
+          INSERT INTO S_Account (ActionType, AccountID, Status, BrokerID, CustomerID, AccountDesc, TaxStatus, EffectiveDate, EndDate, BatchId)
+          VALUES ('{char_insert(action_type)}', {a_id}, 'Active', '{char_insert(a_brokerID)}', '{char_insert(c_id)}', '{char_insert(a_Desc)}', '{char_insert(a_taxStatus)}',
             TO_DATE('{char_insert(action_ts_date)}', 'yyyy-mm-dd'), TO_DATE('9999-12-31', 'yyyy-mm-dd'), {self.batch_number})
           """
           account_inserts.append(insert_account)
@@ -354,9 +354,22 @@ class TPCDI_Loader():
     # First, we insert all NEW rows from S_Account into DimAccount
     load_query = """
       INSERT INTO DimAccount (AccountID, SK_BrokerID, SK_CustomerID, Status, AccountDesc, TaxStatus, IsCurrent, BatchID, EffectiveDate, EndDate)
-      SELECT A.AccountID, A.SK_BrokerID, A.SK_CustomerID, A.Status, A.AccountDesc, A.TaxStatus, A.IsCurrent, A.BatchID, A.EffectiveDate, A.EndDate
+      WITH Copied AS (
+        SELECT A.AccountID, B.SK_BrokerID, C.SK_CustomerID, A.Status, A.AccountDesc, A.TaxStatus, A.IsCurrent, A.BatchID, A.EffectiveDate, A.EndDate
+        FROM S_Account A
+        JOIN BROKER B ON A.BrokerID = B.BrokerID
+        JOIN DimCustomer C ON A.CustomerID = C.CustomerID
+        WHERE A.ActionType = 'NEW' AND
+          NOT EXISTS (
+            SELECT * FROM S_Account A1
+            WHERE A.AccountID = A1.AccountID AND
+              (A1.ActionType = 'UPDACC' OR A1.ActionType = 'INACT') AND
+              A1.EffectiveDate > A.EffectiveDate
+          )
+      )
+      SELECT A.AccountID, CP.SK_BrokerID, CP.SK_CustomerID, A.Status, A.AccountDesc, A.TaxStatus, 'true', A.BatchID, A.EffectiveDate, A.EndDate
       FROM S_Account A
-      JOIN BROKER B ON A.SK_BrokerID = B.BrokerID
+      LEFT OUTER JOIN Copied CP ON (A.AccountID = C.AccountID)
       WHERE A.ActionType = 'NEW'
     """
     print('Done.')
@@ -464,6 +477,7 @@ class TPCDI_Loader():
       user=self.oracle_user, password=self.oracle_pwd, 
       dsn=self.oracle_host+'/'+self.oracle_db) as connection:
       with connection.cursor() as cursor:
+        print(update_query_status)
         cursor.execute(update_query_status)
         cursor.execute(update_query_last_name)
         cursor.execute(update_query_first_name)
