@@ -561,13 +561,14 @@ class TPCDI_Loader():
               TRIM(UPPER(P.PostalCode)) = TRIM(UPPER(C.PostalCode))
       )
     """
-    print(upd_query)
+    print('Updating prospect customer info...')
     with oracledb.connect(
       user=self.oracle_user, password=self.oracle_pwd, 
       dsn=self.oracle_host+'/'+self.oracle_db) as connection:
       with connection.cursor() as cursor:
         cursor.execute(upd_query)
       connection.commit()
+    print('Done.')
 
   def load_staging_broker(self):
     """
