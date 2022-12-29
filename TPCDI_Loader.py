@@ -103,8 +103,10 @@ class TPCDI_Loader():
     cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/TradeType.ctl', self.batch_dir + 'TradeType.txt')
     os.system(cmd)
         
-  def load_staging_customer(self):
+  def load_staging_customer_account(self):
     customer_inserts = []
+    account_inserts = []
+    max_packet = 150
     with open(self.batch_dir + '/CustomerMgmt.xml') as fd:
       doc = xmltodict.parse(fd.read())
       actions = doc['TPCDI:Actions']['TPCDI:Action']
@@ -240,7 +242,6 @@ class TPCDI_Loader():
           (SELECT TX_NAME FROM TaxRate WHERE TX_ID = '{char_insert(c_lcl_tx_id)}'), (SELECT TX_RATE FROM TaxRate WHERE TX_ID = '{char_insert(c_lcl_tx_id)}'),
           TO_DATE('{char_insert(action_ts_date)}', 'yyyy-mm-dd'), TO_DATE('9999-12-31', 'yyyy-mm-dd'), {self.batch_number})
         """
-        print(insert_customer)
         customer_inserts.append(insert_customer)
         # Account fields
         try:
@@ -265,18 +266,22 @@ class TPCDI_Loader():
         VALUES ('{char_insert(action_type)}', {a_id}, 'Active', '{char_insert(a_Desc)}', '{char_insert(a_taxStatus)}',
           TO_DATE('{char_insert(action_ts_date)}', 'yyyy-mm-dd'), TO_DATE('9999-12-31', 'yyyy-mm-dd'), {self.batch_number})
         """
+        account_inserts.append(insert_account)
 
-
-    with oracledb.connect(
-      user=self.oracle_user, password=self.oracle_pwd, 
-      dsn=self.oracle_host+'/'+self.oracle_db) as connection:
-      with connection.cursor() as cursor:
-        for ins in customer_inserts:
-          cursor.execute(ins)
-        connection.commit()
-    print(f'Total actions: {len(actions)}')
-    print(f'Inserted {len(customer_inserts)} rows')
-
+        if len(customer_inserts) + len(account_inserts) >= max_packet:
+                # Create query to load text data into tradeType table
+                with oracledb.connect(
+                  user=self.oracle_user, password=self.oracle_pwd, 
+                  dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+                  with connection.cursor() as cursor:
+                    for ins in customer_inserts:
+                      cursor.execute(ins)
+                    connection.commit()
+                    customer_inserts = []
+                    for ins in account_inserts:
+                      cursor.execute(ins)
+                    connection.commit()
+                    account_inserts = []
   
   def load_new_customer(self):
     """
@@ -311,6 +316,16 @@ class TPCDI_Loader():
       FROM S_Customer C LEFT OUTER JOIN Copied CP ON (C.CustomerID = CP.CustomerID)
       WHERE C.ActionType = 'NEW'
     """
+
+    print(load_query)
+    with oracledb.connect(
+      user=self.oracle_user, password=self.oracle_pwd, 
+      dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+      with connection.cursor() as cursor:
+        cursor.execute(load_query)
+      connection.commit()
+
+  def load_update_customer(self):
     # Now we update all fields in the DimCustomer table with the latest values from S_Customer
     base_update_query = """
       UPDATE DimCustomer C
@@ -356,6 +371,69 @@ class TPCDI_Loader():
     update_query_national_tax_rate = base_update_query % ('C.NationalTaxRate', 'C.NationalTaxRate')
     update_query_local_tax_rate_desc = base_update_query % ('C.LocalTaxRateDesc', 'C.LocalTaxRateDesc')
     update_query_local_tax_rate = base_update_query % ('C.LocalTaxRate', 'C.LocalTaxRate')
+
+    # To finalize the update, we need to update the values from Prospect
+    base_update_prospect_query = """
+    UPDATE DimCustomer C
+      SET C.%s = (
+        SELECT MAX(CP.%s)
+        FROM (P.%s
+              FROM Prospect P
+              WHERE P.FirstName = C.FirstName AND 
+                  UPPER(P.LastName) = UPPER(C.LastName) AND
+                  TRIM(UPPER(P.AddressLine1)) = TRIM(UPPER(C.AddressLine1)) AND
+                  TRIM(UPPER(P.AddressLine2)) = TRIM(UPPER(C.AddressLine2)) AND
+                  TRIM(UPPER(P.PostalCode)) = TRIM(UPPER(C.PostalCode))
+              ) CP
+        WHERE C. CP.CustomerID = C.CustomerID AND
+          EXISTS ( 
+            SELECT * FROM Prospect P
+            WHERE P.FirstName = C.FirstName AND
+              UPPER(P.LastName) = UPPER(C.LastName) AND
+              TRIM(UPPER(P.AddressLine1)) = TRIM(UPPER(C.AddressLine1)) AND
+              TRIM(UPPER(P.AddressLine2)) = TRIM(UPPER(C.AddressLine2)) AND
+              TRIM(UPPER(P.PostalCode)) = TRIM(UPPER(C.PostalCode)) AND
+              P.AgencyID = CP.Agency
+          )
+    """
+    update_query_agency_id = base_update_prospect_query % ('AgencyID', 'AgencyID')
+    update_query_credit_rating = base_update_prospect_query % ('CreditRating', 'CreditRating')
+    update_query_net_worth = base_update_prospect_query % ('NetWorth', 'NetWorth')
+    update_query_marketing_nameplate = base_update_prospect_query % ('MarketingNameplate', 'MarketingNameplate')
+
+    with oracledb.connect(
+      user=self.oracle_user, password=self.oracle_pwd, 
+      dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+      with connection.cursor() as cursor:
+        cursor.execute(update_query_status)
+        cursor.execute(update_query_last_name)
+        cursor.execute(update_query_first_name)
+        cursor.execute(update_query_middle_initial)
+        cursor.execute(update_query_gender)
+        cursor.execute(update_query_tier)
+        cursor.execute(update_query_dob)
+        cursor.execute(update_query_address_line1)
+        cursor.execute(update_query_address_line2)
+        cursor.execute(update_query_postal_code)
+        cursor.execute(update_query_city)
+        cursor.execute(update_query_state_prov)
+        cursor.execute(update_query_country)
+        cursor.execute(update_query_phone1)
+        cursor.execute(update_query_phone2)
+        cursor.execute(update_query_phone3)
+        cursor.execute(update_query_email1)
+        cursor.execute(update_query_email2)
+        cursor.execute(update_query_national_tax_rate_desc)
+        cursor.execute(update_query_national_tax_rate)
+        cursor.execute(update_query_local_tax_rate_desc)
+        cursor.execute(update_query_local_tax_rate)
+        cursor.execute(update_query_agency_id)
+        cursor.execute(update_query_credit_rating)
+        cursor.execute(update_query_net_worth)
+        cursor.execute(update_query_marketing_nameplate)
+      connection.commit()
+
+  def load_inact_customer(self):
     # Finally, we update the EndDate field and the isCurrent field for all rows in the DimCustomer table
     # for which there is a row in S_Customer with an ActionType of 'INACT'
     update_query_end_date = """
@@ -381,37 +459,14 @@ class TPCDI_Loader():
               C2.ActionType = 'INACT' AND C2.EffectiveDate > C1.EffectiveDate)
       )
     """
-
-    print(load_query)
     with oracledb.connect(
       user=self.oracle_user, password=self.oracle_pwd, 
       dsn=self.oracle_host+'/'+self.oracle_db) as connection:
       with connection.cursor() as cursor:
-        cursor.execute(load_query)
-        cursor.execute(update_query_status)
-        cursor.execute(update_query_last_name)
-        cursor.execute(update_query_first_name)
-        cursor.execute(update_query_middle_initial)
-        cursor.execute(update_query_gender)
-        cursor.execute(update_query_tier)
-        cursor.execute(update_query_dob)
-        cursor.execute(update_query_address_line1)
-        cursor.execute(update_query_address_line2)
-        cursor.execute(update_query_postal_code)
-        cursor.execute(update_query_city)
-        cursor.execute(update_query_state_prov)
-        cursor.execute(update_query_country)
-        cursor.execute(update_query_phone1)
-        cursor.execute(update_query_phone2)
-        cursor.execute(update_query_phone3)
-        cursor.execute(update_query_email1)
-        cursor.execute(update_query_email2)
-        cursor.execute(update_query_national_tax_rate_desc)
-        cursor.execute(update_query_national_tax_rate)
-        cursor.execute(update_query_local_tax_rate_desc)
-        cursor.execute(update_query_local_tax_rate)
         cursor.execute(update_query_end_date)
       connection.commit()
+
+
 
   def load_new_account(self):
     """
