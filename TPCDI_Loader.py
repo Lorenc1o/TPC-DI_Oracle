@@ -49,67 +49,84 @@ class TPCDI_Loader():
     
 
   def load_current_batch_date(self):
+    print("Loading batch date...")
     with open(self.batch_dir+"BatchDate.txt", "r") as batch_date_file:
       cmd = TPCDI_Loader.BASE_SQL_CMD+' @%s' % (self.load_path+'/BatchDate.sql')
       cmd += ' %s %s' % (self.batch_number,batch_date_file.read().strip())
       os.system(cmd)
+    print("Done.")
   
   def load_dim_date(self):
     """
     Create DimDate table in the staging database and then load rows in Date.txt into it.
     """
-
+    print("Loading dim date...")
     # Create query to load text data into dimDate table
     cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/DimDate.ctl', self.batch_dir + 'Date.txt')
     os.system(cmd)
+    print("Done.")
 
   def load_dim_time(self):
     """
     Create DimTime table in the staging database and then load rows in Time.txt into it.
     """
+    print("Loading dim time...")
     # Create query to load text data into dimTime table
     cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/DimTime.ctl', self.batch_dir + 'Time.txt')
     os.system(cmd)
+    print("Done.")
     
   def load_industry(self):
     """
     Create Industry table in the staging database and then load rows in Industry.txt into it.
     """
+    print("Loading industry...")
     # Create query to load text data into industry table
     cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/Industry.ctl', self.batch_dir + 'Industry.txt')
     os.system(cmd)
+    print("Done.")
 
   def load_status_type(self):
     """
     Create StatusType table in the staging database and then load rows in StatusType.txt into it.
     """
+    print("Loading status type...")
     # Create query to load text data into statusType table
     cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/StatusType.ctl', self.batch_dir + 'StatusType.txt')
     os.system(cmd)
+    print("Done.")
 
   def load_tax_rate(self):
     """
     Create TaxRate table in the staging database and then load rows in TaxRate.txt into it.
     """
+    print("Loading tax rate...")
     # Create query to load text data into taxRate table
     cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/TaxRate.ctl', self.batch_dir + 'TaxRate.txt')
     os.system(cmd)
+    print("Done.")
     
   def load_trade_type(self):
     """
     Create TradeType table in the staging database and then load rows in TradeType.txt into it.
     """
+    print("Loading trade type...")
     # Create query to load text data into tradeType table
     cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/TradeType.ctl', self.batch_dir + 'TradeType.txt')
     os.system(cmd)
+    print("Done.")
         
-  def load_staging_customer(self):
+  def load_staging_customer_account(self):
+    print("Loading staging customer and account...")
     customer_inserts = []
+    account_inserts = []
+    max_packet = 150
     with open(self.batch_dir + '/CustomerMgmt.xml') as fd:
       doc = xmltodict.parse(fd.read())
       actions = doc['TPCDI:Actions']['TPCDI:Action']
       for action in actions:
         action_type = action['@ActionType']
+        # Customer fields
         try:
           c_id = action['Customer']['@C_ID']
         except:
@@ -228,35 +245,71 @@ class TPCDI_Loader():
             action_ts_date = action['@ActionTS'][0:10]
           except:
             action_ts_date = None
-        insert = f"""
-        INSERT INTO S_Customer (ActionType, CustomerID, TaxID, Status, LastName, FirstName, MiddleInitial, Gender, Tier, DOB, AddressLine1, AddressLine2, PostalCode,
-          City, StateProv, Country, Phone1, Phone2, Phone3, Email1, Email2, NationalTaxRateDesc, NationalTaxRate, LocalTaxRateDesc, LocalTaxRate, EffectiveDate, EndDate, BatchId)
-        VALUES ('{char_insert(action_type)}', {c_id}, '{char_insert(c_tax_id)}', '{char_insert(c_status)}', '{char_insert(c_l_name)}', '{char_insert(c_f_name)}', '{char_insert(c_m_name)}', 
-          '{char_insert(c_gndr)}', {c_tier}, TO_DATE('{char_insert(c_dob)}', 'yyyy-mm-dd'), '{char_insert(c_adline1)}', '{char_insert(c_adline2)}', '{char_insert(c_zipcode)}', 
-          '{char_insert(c_city)}', '{char_insert(c_state_prov)}', '{char_insert(c_ctry)}', '{char_insert(phone_numbers[0])}', '{char_insert(phone_numbers[1])}', 
-          '{char_insert(phone_numbers[2])}', '{char_insert(c_prim_email)}', '{char_insert(c_alt_email)}', 
-          (SELECT TX_NAME FROM TaxRate WHERE TX_ID = '{char_insert(c_nat_tx_id)}'), (SELECT TX_RATE FROM TaxRate WHERE TX_ID = '{char_insert(c_nat_tx_id)}'),
-          (SELECT TX_NAME FROM TaxRate WHERE TX_ID = '{char_insert(c_lcl_tx_id)}'), (SELECT TX_RATE FROM TaxRate WHERE TX_ID = '{char_insert(c_lcl_tx_id)}'),
-          TO_DATE('{char_insert(action_ts_date)}', 'yyyy-mm-dd'), TO_DATE('9999-12-31', 'yyyy-mm-dd'), {self.batch_number})
-        """
-        print(insert)
-        customer_inserts.append(insert)
+        if c_id is not None:
+          insert_customer = f"""
+          INSERT INTO S_Customer (ActionType, CustomerID, TaxID, Status, LastName, FirstName, MiddleInitial, Gender, Tier, DOB, AddressLine1, AddressLine2, PostalCode,
+            City, StateProv, Country, Phone1, Phone2, Phone3, Email1, Email2, NationalTaxRateDesc, NationalTaxRate, LocalTaxRateDesc, LocalTaxRate, EffectiveDate, EndDate, BatchId)
+          VALUES ('{char_insert(action_type)}', {c_id}, '{char_insert(c_tax_id)}', '{char_insert(c_status)}', '{char_insert(c_l_name)}', '{char_insert(c_f_name)}', '{char_insert(c_m_name)}', 
+            '{char_insert(c_gndr)}', {c_tier}, TO_DATE('{char_insert(c_dob)}', 'yyyy-mm-dd'), '{char_insert(c_adline1)}', '{char_insert(c_adline2)}', '{char_insert(c_zipcode)}', 
+            '{char_insert(c_city)}', '{char_insert(c_state_prov)}', '{char_insert(c_ctry)}', '{char_insert(phone_numbers[0])}', '{char_insert(phone_numbers[1])}', 
+            '{char_insert(phone_numbers[2])}', '{char_insert(c_prim_email)}', '{char_insert(c_alt_email)}', 
+            (SELECT TX_NAME FROM TaxRate WHERE TX_ID = '{char_insert(c_nat_tx_id)}'), (SELECT TX_RATE FROM TaxRate WHERE TX_ID = '{char_insert(c_nat_tx_id)}'),
+            (SELECT TX_NAME FROM TaxRate WHERE TX_ID = '{char_insert(c_lcl_tx_id)}'), (SELECT TX_RATE FROM TaxRate WHERE TX_ID = '{char_insert(c_lcl_tx_id)}'),
+            TO_DATE('{char_insert(action_ts_date)}', 'yyyy-mm-dd'), TO_DATE('9999-12-31', 'yyyy-mm-dd'), {self.batch_number})
+          """
+          customer_inserts.append(insert_customer)
+        # Account fields
+        try:
+          a_id = action['Customer']['Account']['@CA_ID']
+        except:
+          a_id = None
+        try:
+          a_Desc = action['Customer']['Account']['CA_NAME']
+        except:
+          a_Desc = None
+        try:
+          a_taxStatus = action['Customer']['Account']['@CA_TAX_ST']
+        except:
+          a_taxStatus = None
+        try:
+          a_brokerID = action['Customer']['Account']['CA_B_ID']
+        except:
+          a_brokerID = None
+        # action_type we have it already
+        try:
+          action_ts_date = action['@ActionTS'][0:10]
+        except:
+          action_ts_date = None
+        if a_id is not None:
+          insert_account = f"""
+          INSERT INTO S_Account (ActionType, AccountID, Status, BrokerID, CustomerID, AccountDesc, TaxStatus, EffectiveDate, EndDate, BatchId)
+          VALUES ('{char_insert(action_type)}', {a_id}, 'Active', '{char_insert(a_brokerID)}', '{char_insert(c_id)}', '{char_insert(a_Desc)}', '{char_insert(a_taxStatus)}',
+            TO_DATE('{char_insert(action_ts_date)}', 'yyyy-mm-dd'), TO_DATE('9999-12-31', 'yyyy-mm-dd'), {self.batch_number})
+          """
+          account_inserts.append(insert_account)
 
-    with oracledb.connect(
-      user=self.oracle_user, password=self.oracle_pwd, 
-      dsn=self.oracle_host+'/'+self.oracle_db) as connection:
-      with connection.cursor() as cursor:
-        for ins in customer_inserts:
-          cursor.execute(ins)
-        connection.commit()
-    print(f'Total actions: {len(actions)}')
-    print(f'Inserted {len(customer_inserts)} rows')
-
+        if len(customer_inserts) + len(account_inserts) >= max_packet:
+                # Create query to load text data into tradeType table
+                with oracledb.connect(
+                  user=self.oracle_user, password=self.oracle_pwd, 
+                  dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+                  with connection.cursor() as cursor:
+                    for ins in customer_inserts:
+                      cursor.execute(ins)
+                    connection.commit()
+                    customer_inserts = []
+                    for ins in account_inserts:
+                      cursor.execute(ins)
+                    connection.commit()
+                    account_inserts = []
+    print('Done.')
   
   def load_new_customer(self):
     """
     Load NEW customers into DimCustomer table
     """
+    print('Loading new customers into DimCustomer table...')
+    # First, we insert all NEW customers into the DimCustomer table
     load_query = """
       INSERT INTO DimCustomer(CustomerID, TaxID, Status, LastName, FirstName, MiddleInitial, Gender, Tier, DOB, AddressLine1, AddressLine2, PostalCode,
                 City, StateProv, Country, Phone1, Phone2, Phone3, Email1, Email2, NationalTaxRateDesc, NationalTaxRate, LocalTaxRateDesc, LocalTaxRate, EffectiveDate, 
@@ -285,27 +338,65 @@ class TPCDI_Loader():
       FROM S_Customer C LEFT OUTER JOIN Copied CP ON (C.CustomerID = CP.CustomerID)
       WHERE C.ActionType = 'NEW'
     """
+    with oracledb.connect(
+      user=self.oracle_user, password=self.oracle_pwd, 
+      dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+      with connection.cursor() as cursor:
+        cursor.execute(load_query)
+      connection.commit()
+    print('Done.')
+
+  def load_new_account(self):
+    """
+    Load NEW accounts in S_Account into DimAccount table in the target database.
+    """
+    print('Loading new accounts...')
+    # First, we insert all NEW rows from S_Account into DimAccount
+    load_query = """
+      INSERT INTO DimAccount (AccountID, SK_BrokerID, SK_CustomerID, Status, AccountDesc, TaxStatus, IsCurrent, BatchID, EffectiveDate, EndDate)
+      WITH Copied AS (
+        SELECT A.AccountID, B.SK_BrokerID, C.SK_CustomerID, A.Status, A.AccountDesc, A.TaxStatus, A.IsCurrent, A.BatchID, A.EffectiveDate, A.EndDate
+        FROM S_Account A
+        JOIN BROKER B ON A.BrokerID = B.BrokerID
+        JOIN DimCustomer C ON A.CustomerID = C.CustomerID
+        WHERE A.ActionType = 'NEW' AND
+          NOT EXISTS (
+            SELECT * FROM S_Account A1
+            WHERE A.AccountID = A1.AccountID AND
+              (A1.ActionType = 'UPDACC' OR A1.ActionType = 'INACT') AND
+              A1.EffectiveDate > A.EffectiveDate
+          )
+      )
+      SELECT A.AccountID, CP.SK_BrokerID, CP.SK_CustomerID, A.Status, A.AccountDesc, A.TaxStatus, 'true', A.BatchID, A.EffectiveDate, A.EndDate
+      FROM S_Account A
+      LEFT OUTER JOIN Copied CP ON (A.AccountID = C.AccountID)
+      WHERE A.ActionType = 'NEW'
+    """
+    print('Done.')
+
+  def load_update_customer(self):
     # Now we update all fields in the DimCustomer table with the latest values from S_Customer
+    print('Updating DimCustomer table...')
     base_update_query = """
       UPDATE DimCustomer C
       SET %s = (
         SELECT MAX(%s)
         FROM S_Customer C1
         WHERE C1.CustomerID = C.CustomerID AND
-          C1.ActionType IN ('NEW', 'UPDCUST') AND
+          C1.ActionType = 'UPDCUST' AND
           NOT EXISTS (
             SELECT * FROM S_Customer C2 
             WHERE C2.CustomerID = C1.CustomerID 
-            AND C2.ActionType IN ('NEW', 'UPDCUST') AND C2.EffectiveDate > C1.EffectiveDate)
+            AND C2.ActionType = 'UPDCUST' AND C2.EffectiveDate > C1.EffectiveDate)
       )
       WHERE EXISTS (
         SELECT * FROM S_Customer C1
         WHERE C1.CustomerID = C.CustomerID AND
-          C1.ActionType IN ('NEW', 'UPDCUST') AND
+          C1.ActionType = 'UPDCUST' AND
           NOT EXISTS (
             SELECT * FROM S_Customer C2
             WHERE C2.CustomerID = C1.CustomerID AND
-              C2.ActionType IN ('NEW', 'UPDCUST') AND C2.EffectiveDate > C1.EffectiveDate)
+              C2.ActionType = 'UPDCUST' AND C2.EffectiveDate > C1.EffectiveDate)
       )
     """
     update_query_status = base_update_query % ('C.Status', 'C.Status')
@@ -330,8 +421,102 @@ class TPCDI_Loader():
     update_query_national_tax_rate = base_update_query % ('C.NationalTaxRate', 'C.NationalTaxRate')
     update_query_local_tax_rate_desc = base_update_query % ('C.LocalTaxRateDesc', 'C.LocalTaxRateDesc')
     update_query_local_tax_rate = base_update_query % ('C.LocalTaxRate', 'C.LocalTaxRate')
+
+    # To finalize the update, we need to update the values from Prospect
+    base_update_prospect_query = """
+    UPDATE DimCustomer C
+      SET C.AgencyID = (
+        SELECT MAX(CP.AgencyID)
+        FROM (SELECT P.AgencyID
+              FROM Prospect P
+              WHERE P.FirstName = C.FirstName AND 
+                  UPPER(P.LastName) = UPPER(C.LastName) AND
+                  TRIM(UPPER(P.AddressLine1)) = TRIM(UPPER(C.AddressLine1)) AND
+                  TRIM(UPPER(P.AddressLine2)) = TRIM(UPPER(C.AddressLine2)) AND
+                  TRIM(UPPER(P.PostalCode)) = TRIM(UPPER(C.PostalCode))
+              ) CP),
+          C.CreditRating = (
+          SELECT MAX(CP.CreditRating)
+          FROM (SELECT P.CreditRating
+                FROM Prospect P
+                WHERE P.FirstName = C.FirstName AND 
+                    UPPER(P.LastName) = UPPER(C.LastName) AND
+                    TRIM(UPPER(P.AddressLine1)) = TRIM(UPPER(C.AddressLine1)) AND
+                    TRIM(UPPER(P.AddressLine2)) = TRIM(UPPER(C.AddressLine2)) AND
+                    TRIM(UPPER(P.PostalCode)) = TRIM(UPPER(C.PostalCode))
+                ) CP),
+          C.NetWorth = (
+          SELECT MAX(CP.NetWorth)
+          FROM (SELECT P.NetWorth
+                FROM Prospect P
+                WHERE P.FirstName = C.FirstName AND 
+                    UPPER(P.LastName) = UPPER(C.LastName) AND
+                    TRIM(UPPER(P.AddressLine1)) = TRIM(UPPER(C.AddressLine1)) AND
+                    TRIM(UPPER(P.AddressLine2)) = TRIM(UPPER(C.AddressLine2)) AND
+                    TRIM(UPPER(P.PostalCode)) = TRIM(UPPER(C.PostalCode))
+                ) CP),
+          C.MarketingNameplate = (
+          SELECT MAX(CP.MarketingNameplate)
+          FROM (SELECT P.MarketingNameplate
+                FROM Prospect P
+                WHERE P.FirstName = C.FirstName AND 
+                    UPPER(P.LastName) = UPPER(C.LastName) AND
+                    TRIM(UPPER(P.AddressLine1)) = TRIM(UPPER(C.AddressLine1)) AND
+                    TRIM(UPPER(P.AddressLine2)) = TRIM(UPPER(C.AddressLine2)) AND
+                    TRIM(UPPER(P.PostalCode)) = TRIM(UPPER(C.PostalCode))
+                ) CP)
+      WHERE EXISTS (
+        SELECT * FROM S_Customer C1
+        WHERE C1.CustomerID = C.CustomerID AND
+          C1.ActionType = 'UPDCUST' AND
+          NOT EXISTS (
+            SELECT * FROM S_Customer C2
+            WHERE C2.CustomerID = C1.CustomerID AND
+              C2.ActionType = 'UPDCUST' AND C2.EffectiveDate > C1.EffectiveDate)
+      )
+    """
+    with oracledb.connect(
+      user=self.oracle_user, password=self.oracle_pwd, 
+      dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+      with connection.cursor() as cursor:
+        print('...')
+        cursor.execute(update_query_status)
+        cursor.execute(update_query_last_name)
+        cursor.execute(update_query_first_name)
+        print('...')
+        cursor.execute(update_query_middle_initial)
+        cursor.execute(update_query_gender)
+        cursor.execute(update_query_tier)
+        print('...')
+        cursor.execute(update_query_dob)
+        cursor.execute(update_query_address_line1)
+        cursor.execute(update_query_address_line2)
+        print('...')
+        cursor.execute(update_query_postal_code)
+        cursor.execute(update_query_city)
+        cursor.execute(update_query_state_prov)
+        print('...')
+        cursor.execute(update_query_country)
+        cursor.execute(update_query_phone1)
+        cursor.execute(update_query_phone2)
+        print('...')
+        cursor.execute(update_query_phone3)
+        cursor.execute(update_query_email1)
+        cursor.execute(update_query_email2)
+        print('...')
+        cursor.execute(update_query_national_tax_rate_desc)
+        cursor.execute(update_query_national_tax_rate)
+        cursor.execute(update_query_local_tax_rate_desc)
+        cursor.execute(update_query_local_tax_rate)
+        print('...')
+        cursor.execute(base_update_prospect_query)
+      connection.commit()
+    print('Done.')
+
+  def load_inact_customer(self):
     # Finally, we update the EndDate field and the isCurrent field for all rows in the DimCustomer table
     # for which there is a row in S_Customer with an ActionType of 'INACT'
+    print('Updating inactive customers...')
     update_query_end_date = """
       UPDATE DimCustomer C
       SET C.EndDate = (
@@ -355,59 +540,35 @@ class TPCDI_Loader():
               C2.ActionType = 'INACT' AND C2.EffectiveDate > C1.EffectiveDate)
       )
     """
-
-    print(load_query)
     with oracledb.connect(
       user=self.oracle_user, password=self.oracle_pwd, 
       dsn=self.oracle_host+'/'+self.oracle_db) as connection:
       with connection.cursor() as cursor:
-        cursor.execute(load_query)
-        cursor.execute(update_query_status)
-        cursor.execute(update_query_last_name)
-        cursor.execute(update_query_first_name)
-        cursor.execute(update_query_middle_initial)
-        cursor.execute(update_query_gender)
-        cursor.execute(update_query_tier)
-        cursor.execute(update_query_dob)
-        cursor.execute(update_query_address_line1)
-        cursor.execute(update_query_address_line2)
-        cursor.execute(update_query_postal_code)
-        cursor.execute(update_query_city)
-        cursor.execute(update_query_state_prov)
-        cursor.execute(update_query_country)
-        cursor.execute(update_query_phone1)
-        cursor.execute(update_query_phone2)
-        cursor.execute(update_query_phone3)
-        cursor.execute(update_query_email1)
-        cursor.execute(update_query_email2)
-        cursor.execute(update_query_national_tax_rate_desc)
-        cursor.execute(update_query_national_tax_rate)
-        cursor.execute(update_query_local_tax_rate_desc)
-        cursor.execute(update_query_local_tax_rate)
         cursor.execute(update_query_end_date)
       connection.commit()
-            
+    print('Done.')
   
   def load_staging_broker(self):
     """
     Load rows in HR.csv into S_Broker table in staging database.
     """
-
+    print('Loading staging broker...')
     # Create query to load txt data into S_Watches table
     cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/Broker.ctl', self.batch_dir + 'HR.csv')
     os.system(cmd)
+    print('Done.')
 
   def load_broker(self):
     """
     Create DimBroker table in the target database and then load rows in HR.csv into it.
     """
+    print('Loading broker...')
     load_dim_broker_query = """
       INSERT INTO DimBroker (BrokerID,ManagerID,FirstName,LastName,MiddleInitial,Branch,Office,Phone,IsCurrent,BatchID,EffectiveDate,EndDate)
       SELECT SB.EmployeeID, SB.ManagerID, SB.EmployeeFirstName, SB.EmployeeLastName, SB.EmployeeMI, SB.EmployeeBranch, SB.EmployeeOffice, SB.EmployeePhone, 'true', %d, (SELECT MIN(DateValue) FROM DimDate), TO_DATE('9999/12/31', 'yyyy/mm/dd')
       FROM S_Broker SB
       WHERE SB.EmployeeJobCode = 314
     """ % (self.batch_number)
-    print(load_dim_broker_query)
 
     with oracledb.connect(
       user=self.oracle_user, password=self.oracle_pwd, 
@@ -415,36 +576,41 @@ class TPCDI_Loader():
       with connection.cursor() as cursor:
         cursor.execute(load_dim_broker_query)
       connection.commit()
+    print('Done.')
 
 
   def load_staging_cash_balances(self):
     """
     Load rows in CashTransaction.txt into S_Cash_Balances table in staging database.
     """
-
+    print('Loading staging cash balances...')
     # Create query to load txt data into S_Watches table
     cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/CashBalances.ctl', self.batch_dir + 'CashTransaction.txt')
     os.system(cmd)
+    print('Done.')
 
   def load_staging_watches(self):
     """
     Load rows in WatchHistory.txt into S_Watches table in staging database.
     """
-
+    print('Loading staging watches...')
     # Create query to load txt data into S_Watches table
     cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/Watches.ctl', self.batch_dir + 'WatchHistory.txt')
     os.system(cmd)
+    print('Done.')
 
   def load_staging_prospect(self):
     """
     Load rows in Prospect.csv into S_Prospect table in staging database.
     """
-
+    print('Loading staging prospect...')
     # Create query to load csv data into S_Prospect table
     cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/Prospect.ctl', self.batch_dir + 'Prospect.csv')
     os.system(cmd)
+    print('Done.')
 
   def load_prospect(self):
+    print('Loading prospect...')
     marketing_nameplate_func = """
     CREATE OR REPLACE FUNCTION get_marketing_template(net_worth NUMBER, income NUMBER,
     number_credit_cards NUMBER, number_children NUMBER, age NUMBER,
@@ -483,8 +649,7 @@ class TPCDI_Loader():
           SP.CREDIT_RATING, SP.OWN_OR_RENT_FLAG, SP.EMPLOYER,SP.NUMBER_CREDIT_CARDS, SP.NET_WORTH, 
           get_marketing_template(SP.NET_WORTH, SP.INCOME, SP.NUMBER_CREDIT_CARDS, SP.NUMBER_CHILDREM, SP.AGE, SP.CREDIT_RATING, SP.NUMBER_CARS) MarketingNameplate
     FROM S_Prospect SP
-    """.format(self.batch_number)    
-    print(load_prospect_query)
+    """.format(self.batch_number)   
 
     with oracledb.connect(
       user=self.oracle_user, password=self.oracle_pwd, 
@@ -493,19 +658,23 @@ class TPCDI_Loader():
         cursor.execute(marketing_nameplate_func)
         cursor.execute(load_prospect_query)
       connection.commit()
+    print('Done.')
   
   def load_audit(self):
     """
     Create Audit table in the staging database and then load rows in files with "_audit.csv" ending into it.
     """
+    print('Loading staging audit...')
     for filepath in glob.iglob(self.batch_dir+"*_audit.csv"):# Create query to load text data into tradeType table
       cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/Audit.ctl', filepath)
       os.system(cmd)
+    print('Done.')
 
   def load_staging_finwire(self):
     """
     Create S_Company and S_Security table in the staging database and then load rows in FINWIRE files with the type of CMP
     """
+    print('Loading staging company, security and financial...')
     base_path = "../staging/"+self.sf+"/Batch1/"
     s_company_base_query = "INSERT INTO S_Company"
     s_security_base_query = "INSERT INTO S_Security"
@@ -737,11 +906,13 @@ class TPCDI_Loader():
               cursor.execute(query)
           connection.commit()
         s_financial_values = []
+    print('Done.')
           
   def load_target_dim_company(self):
     """
     Create Dim Company table in the staging database and then load rows by joining staging_company, staging_industry, and staging StatusType
     """
+    print('Loading DimCompany table...')
 
     load_dim_company_query = """
     INSERT INTO DimCompany (CompanyID, Status,Name,Industry,SPrating,isLowGrade,CEO,AddressLine1,AddressLine2,PostalCode,City,StateProv,Country,Description,FoundingDate,IsCurrent,BatchID,EffectiveDate,EndDate)
@@ -829,11 +1000,13 @@ class TPCDI_Loader():
         cursor.execute(update_sdc_dimcompany_query)
         cursor.execute(drop_sdc_dimcompany_query)
       connection.commit()
+    print('Done.')
   
   def load_target_dim_security(self):
     """
     Create Security table in the staging database and then load rows by joining staging_security, status_type and dim_company
     """
+    print('Loading DimSecurity...')
     load_dim_security_query_1 = """
     INSERT INTO DimSecurity (Symbol,Issue,Status,Name,ExchangeID,SK_CompanyID,SharesOutstanding,FirstTrade,FirstTradeOnExchange,Dividend,IsCurrent,BatchID,EffectiveDate,EndDate)
     SELECT SS.SYMBOL,SS.ISSUE_TYPE, ST.ST_NAME, SS.NAME, SS.EX_ID, DC.SK_CompanyID, SS.SH_OUT, TO_DATE(SS.FIRST_TRADE_DATE,'YYYY-MM-DD'),
@@ -921,6 +1094,7 @@ class TPCDI_Loader():
         cursor.execute(update_sdc_dimsecurity_query)
         cursor.execute(drop_sdc_dimsecurity_query)
       connection.commit()
+    print('Done.')
 
   def load_target_financial(self):
     """
