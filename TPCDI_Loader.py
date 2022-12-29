@@ -412,6 +412,7 @@ class TPCDI_Loader():
         SELECT MAX(%s)
         FROM S_Customer C1
         WHERE C1.CustomerID = C.CustomerID AND
+          C1.%s IS NOT NULL AND
           C1.ActionType = 'UPDCUST' AND
           NOT EXISTS (
             SELECT * FROM S_Customer C2 
@@ -421,6 +422,7 @@ class TPCDI_Loader():
       WHERE EXISTS (
         SELECT * FROM S_Customer C1
         WHERE C1.CustomerID = C.CustomerID AND
+          C1.%s IS NOT NULL AND
           C1.ActionType = 'UPDCUST' AND
           NOT EXISTS (
             SELECT * FROM S_Customer C2
@@ -428,28 +430,28 @@ class TPCDI_Loader():
               C2.ActionType = 'UPDCUST' AND C2.EffectiveDate > C1.EffectiveDate)
       )
     """
-    update_query_status = base_update_query % ('C.Status', 'C1.Status')
-    update_query_last_name = base_update_query % ('C.LastName', 'C1.LastName')
-    update_query_first_name = base_update_query % ('C.FirstName', 'C1.FirstName')
-    update_query_middle_initial = base_update_query % ('C.MiddleInitial', 'C1.MiddleInitial')
-    update_query_gender = base_update_query % ('C.Gender', 'C1.Gender')
-    update_query_tier = base_update_query % ('C.Tier', 'C1.Tier')
-    update_query_dob = base_update_query % ('C.DOB', 'C1.DOB')
-    update_query_address_line1 = base_update_query % ('C.AddressLine1', 'C1.AddressLine1')
-    update_query_address_line2 = base_update_query % ('C.AddressLine2', 'C1.AddressLine2')
-    update_query_postal_code = base_update_query % ('C.PostalCode', 'C1.PostalCode')
-    update_query_city = base_update_query % ('C.City', 'C1.City')
-    update_query_state_prov = base_update_query % ('C.StateProv', 'C1.StateProv')
-    update_query_country = base_update_query % ('C.Country', 'C1.Country')
-    update_query_phone1 = base_update_query % ('C.Phone1', 'C1.Phone1')
-    update_query_phone2 = base_update_query % ('C.Phone2', 'C1.Phone2')
-    update_query_phone3 = base_update_query % ('C.Phone3', 'C1.Phone3')
-    update_query_email1 = base_update_query % ('C.Email1', 'C1.Email1')
-    update_query_email2 = base_update_query % ('C.Email2', 'C1.Email2')
-    update_query_national_tax_rate_desc = base_update_query % ('C.NationalTaxRateDesc', 'C1.NationalTaxRateDesc')
-    update_query_national_tax_rate = base_update_query % ('C.NationalTaxRate', 'C1.NationalTaxRate')
-    update_query_local_tax_rate_desc = base_update_query % ('C.LocalTaxRateDesc', 'C1.LocalTaxRateDesc')
-    update_query_local_tax_rate = base_update_query % ('C.LocalTaxRate', 'C1.LocalTaxRate')
+    update_query_status = base_update_query % ('C.Status', 'C1.Status', 'Status', 'Status')
+    update_query_last_name = base_update_query % ('C.LastName', 'C1.LastName', 'LastName', 'LastName')
+    update_query_first_name = base_update_query % ('C.FirstName', 'C1.FirstName', 'FirstName', 'FirstName')
+    update_query_middle_initial = base_update_query % ('C.MiddleInitial', 'C1.MiddleInitial', 'MiddleInitial', 'MiddleInitial')
+    update_query_gender = base_update_query % ('C.Gender', 'C1.Gender', 'Gender', 'Gender')
+    update_query_tier = base_update_query % ('C.Tier', 'C1.Tier', 'Tier', 'Tier')
+    update_query_dob = base_update_query % ('C.DOB', 'C1.DOB', 'DOB', 'DOB')
+    update_query_address_line1 = base_update_query % ('C.AddressLine1', 'C1.AddressLine1', 'AddressLine1', 'AddressLine1')
+    update_query_address_line2 = base_update_query % ('C.AddressLine2', 'C1.AddressLine2', 'AddressLine2', 'AddressLine2')
+    update_query_postal_code = base_update_query % ('C.PostalCode', 'C1.PostalCode', 'PostalCode', 'PostalCode')
+    update_query_city = base_update_query % ('C.City', 'C1.City', 'City', 'City')
+    update_query_state_prov = base_update_query % ('C.StateProv', 'C1.StateProv', 'StateProv', 'StateProv')
+    update_query_country = base_update_query % ('C.Country', 'C1.Country', 'Country', 'Country')
+    update_query_phone1 = base_update_query % ('C.Phone1', 'C1.Phone1', 'Phone1', 'Phone1')
+    update_query_phone2 = base_update_query % ('C.Phone2', 'C1.Phone2', 'Phone2', 'Phone2')
+    update_query_phone3 = base_update_query % ('C.Phone3', 'C1.Phone3', 'Phone3', 'Phone3')
+    update_query_email1 = base_update_query % ('C.Email1', 'C1.Email1', 'Email1', 'Email1')
+    update_query_email2 = base_update_query % ('C.Email2', 'C1.Email2', 'Email2', 'Email2')
+    update_query_national_tax_rate_desc = base_update_query % ('C.NationalTaxRateDesc', 'C1.NationalTaxRateDesc', 'NationalTaxRateDesc', 'NationalTaxRateDesc')
+    update_query_national_tax_rate = base_update_query % ('C.NationalTaxRate', 'C1.NationalTaxRate', 'NationalTaxRate', 'NationalTaxRate')
+    update_query_local_tax_rate_desc = base_update_query % ('C.LocalTaxRateDesc', 'C1.LocalTaxRateDesc', 'LocalTaxRateDesc', 'LocalTaxRateDesc')
+    update_query_local_tax_rate = base_update_query % ('C.LocalTaxRate', 'C1.LocalTaxRate', 'LocalTaxRate', 'LocalTaxRate')
 
     # To finalize the update, we need to update the values from Prospect
     base_update_prospect_query = """
