@@ -438,6 +438,25 @@ CREATE TABLE S_Customer  (  ActionType CHAR(10),
 							EffectiveDate date,
 							EndDate date
 );
+
+CREATE TABLE S_Trade (
+      cdc_flag CHAR(1),
+      cdc_dsn NUMBER(12),
+      t_id NUMBER(15),
+      t_dts DATE,
+      t_st_id CHAR(4),
+      t_tt_id CHAR(3),
+      t_is_cash CHAR(3),
+      t_s_symb CHAR(15) NOT NULL,
+      t_qty NUMBER(6) NOT NULL,
+      t_bid_price NUMBER(8),
+      t_ca_id NUMBER(11),
+      t_exec_name CHAR(49),
+      t_trade_price NUMBER(8),
+      t_chrg NUMBER(10),
+      t_comm NUMBER(10),
+      t_tax NUMBER(10)
+    );
 -- CREATE INDEX PIndex ON dimtrade (tradeid);
 -- CREATE TABLE dimtradeforexperiment
 -- (
