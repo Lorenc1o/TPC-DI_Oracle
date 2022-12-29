@@ -372,6 +372,12 @@ class TPCDI_Loader():
       LEFT OUTER JOIN Copied CP ON (A.AccountID = C.AccountID)
       WHERE A.ActionType = 'NEW'
     """
+    with oracledb.connect(
+      user=self.oracle_user, password=self.oracle_pwd, 
+      dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+      with connection.cursor() as cursor:
+        cursor.execute(load_query)
+      connection.commit()
     print('Done.')
 
   def load_update_customer(self):

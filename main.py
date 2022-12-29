@@ -63,6 +63,7 @@ if __name__ == "__main__":
             loader.load_prospect()
             loader.load_staging_customer_account()
             loader.load_new_customer()
+            loader.load_new_account()
             loader.load_update_customer()
             loader.load_inact_customer()
             # loader.load_broker()
