@@ -359,7 +359,7 @@ class TPCDI_Loader():
         FROM S_Account A
         JOIN DimBroker B ON A.BrokerID = B.BrokerID
         JOIN DimCustomer C ON A.CustomerID = C.CustomerID
-        WHERE A.ActionType = 'NEW' AND
+        WHERE A.ActionType IN ('NEW', 'ADDACCT') AND
           NOT EXISTS (
             SELECT * FROM S_Account A1
             WHERE A.AccountID = A1.AccountID AND
@@ -370,7 +370,7 @@ class TPCDI_Loader():
       SELECT A.AccountID, CP.SK_BrokerID, CP.SK_CustomerID, A.Status, A.AccountDesc, A.TaxStatus, 'true', A.BatchID, A.EffectiveDate, A.EndDate
       FROM S_Account A
       LEFT OUTER JOIN Copied CP ON (A.AccountID = CP.AccountID)
-      WHERE A.ActionType = 'NEW'
+      WHERE A.ActionType = IN ('NEW', 'ADDACCT')
     """
     with oracledb.connect(
       user=self.oracle_user, password=self.oracle_pwd, 
