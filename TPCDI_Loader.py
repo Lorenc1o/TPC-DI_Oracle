@@ -279,6 +279,7 @@ class TPCDI_Loader():
                     connection.commit()
                     customer_inserts = []
                     for ins in account_inserts:
+                      print(ins)
                       cursor.execute(ins)
                     connection.commit()
                     account_inserts = []
