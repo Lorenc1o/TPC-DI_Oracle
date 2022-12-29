@@ -49,61 +49,75 @@ class TPCDI_Loader():
     
 
   def load_current_batch_date(self):
+    print("Loading batch date...")
     with open(self.batch_dir+"BatchDate.txt", "r") as batch_date_file:
       cmd = TPCDI_Loader.BASE_SQL_CMD+' @%s' % (self.load_path+'/BatchDate.sql')
       cmd += ' %s %s' % (self.batch_number,batch_date_file.read().strip())
       os.system(cmd)
+    print("Done.")
   
   def load_dim_date(self):
     """
     Create DimDate table in the staging database and then load rows in Date.txt into it.
     """
-
+    print("Loading dim date...")
     # Create query to load text data into dimDate table
     cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/DimDate.ctl', self.batch_dir + 'Date.txt')
     os.system(cmd)
+    print("Done.")
 
   def load_dim_time(self):
     """
     Create DimTime table in the staging database and then load rows in Time.txt into it.
     """
+    print("Loading dim time...")
     # Create query to load text data into dimTime table
     cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/DimTime.ctl', self.batch_dir + 'Time.txt')
     os.system(cmd)
+    print("Done.")
     
   def load_industry(self):
     """
     Create Industry table in the staging database and then load rows in Industry.txt into it.
     """
+    print("Loading industry...")
     # Create query to load text data into industry table
     cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/Industry.ctl', self.batch_dir + 'Industry.txt')
     os.system(cmd)
+    print("Done.")
 
   def load_status_type(self):
     """
     Create StatusType table in the staging database and then load rows in StatusType.txt into it.
     """
+    print("Loading status type...")
     # Create query to load text data into statusType table
     cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/StatusType.ctl', self.batch_dir + 'StatusType.txt')
     os.system(cmd)
+    print("Done.")
 
   def load_tax_rate(self):
     """
     Create TaxRate table in the staging database and then load rows in TaxRate.txt into it.
     """
+    print("Loading tax rate...")
     # Create query to load text data into taxRate table
     cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/TaxRate.ctl', self.batch_dir + 'TaxRate.txt')
     os.system(cmd)
+    print("Done.")
     
   def load_trade_type(self):
     """
     Create TradeType table in the staging database and then load rows in TradeType.txt into it.
     """
+    print("Loading trade type...")
     # Create query to load text data into tradeType table
     cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/TradeType.ctl', self.batch_dir + 'TradeType.txt')
     os.system(cmd)
+    print("Done.")
         
   def load_staging_customer_account(self):
+    print("Loading staging customer and account...")
     customer_inserts = []
     account_inserts = []
     max_packet = 150
@@ -267,7 +281,6 @@ class TPCDI_Loader():
         except:
           action_ts_date = None
         if a_id is not None:
-          print(a_id)
           insert_account = f"""
           INSERT INTO S_Account (ActionType, AccountID, Status, BrokerID, AccountDesc, TaxStatus, EffectiveDate, EndDate, BatchId)
           VALUES ('{char_insert(action_type)}', {a_id}, 'Active', '{char_insert(a_brokerID)}', '{char_insert(a_Desc)}', '{char_insert(a_taxStatus)}',
@@ -286,15 +299,16 @@ class TPCDI_Loader():
                     connection.commit()
                     customer_inserts = []
                     for ins in account_inserts:
-                      print(ins)
                       cursor.execute(ins)
                     connection.commit()
                     account_inserts = []
+    print('Done.')
   
   def load_new_customer(self):
     """
     Load NEW customers into DimCustomer table
     """
+    print('Loading new customers into DimCustomer table...')
     # First, we insert all NEW customers into the DimCustomer table
     load_query = """
       INSERT INTO DimCustomer(CustomerID, TaxID, Status, LastName, FirstName, MiddleInitial, Gender, Tier, DOB, AddressLine1, AddressLine2, PostalCode,
@@ -324,17 +338,17 @@ class TPCDI_Loader():
       FROM S_Customer C LEFT OUTER JOIN Copied CP ON (C.CustomerID = CP.CustomerID)
       WHERE C.ActionType = 'NEW'
     """
-
-    print(load_query)
     with oracledb.connect(
       user=self.oracle_user, password=self.oracle_pwd, 
       dsn=self.oracle_host+'/'+self.oracle_db) as connection:
       with connection.cursor() as cursor:
         cursor.execute(load_query)
       connection.commit()
+    print('Done.')
 
   def load_update_customer(self):
     # Now we update all fields in the DimCustomer table with the latest values from S_Customer
+    print('Updating DimCustomer table...')
     base_update_query = """
       UPDATE DimCustomer C
       SET %s = (
@@ -385,23 +399,21 @@ class TPCDI_Loader():
     UPDATE DimCustomer C
       SET C.%s = (
         SELECT MAX(CP.%s)
-        FROM (P.%s
+        FROM (SELECT P.%s
               FROM Prospect P
               WHERE P.FirstName = C.FirstName AND 
                   UPPER(P.LastName) = UPPER(C.LastName) AND
                   TRIM(UPPER(P.AddressLine1)) = TRIM(UPPER(C.AddressLine1)) AND
                   TRIM(UPPER(P.AddressLine2)) = TRIM(UPPER(C.AddressLine2)) AND
                   TRIM(UPPER(P.PostalCode)) = TRIM(UPPER(C.PostalCode))
-              ) CP
-        WHERE C. CP.CustomerID = C.CustomerID AND
-          EXISTS ( 
+              ) CP)
+        WHERE EXISTS ( 
             SELECT * FROM Prospect P
             WHERE P.FirstName = C.FirstName AND
               UPPER(P.LastName) = UPPER(C.LastName) AND
               TRIM(UPPER(P.AddressLine1)) = TRIM(UPPER(C.AddressLine1)) AND
               TRIM(UPPER(P.AddressLine2)) = TRIM(UPPER(C.AddressLine2)) AND
-              TRIM(UPPER(P.PostalCode)) = TRIM(UPPER(C.PostalCode)) AND
-              P.AgencyID = CP.Agency
+              TRIM(UPPER(P.PostalCode)) = TRIM(UPPER(C.PostalCode))
           )
     """
     update_query_agency_id = base_update_prospect_query % ('AgencyID', 'AgencyID', 'AgencyID')
@@ -440,10 +452,12 @@ class TPCDI_Loader():
         cursor.execute(update_query_net_worth)
         cursor.execute(update_query_marketing_nameplate)
       connection.commit()
+    print('Done.')
 
   def load_inact_customer(self):
     # Finally, we update the EndDate field and the isCurrent field for all rows in the DimCustomer table
     # for which there is a row in S_Customer with an ActionType of 'INACT'
+    print('Updating inactive customers...')
     update_query_end_date = """
       UPDATE DimCustomer C
       SET C.EndDate = (
@@ -473,6 +487,7 @@ class TPCDI_Loader():
       with connection.cursor() as cursor:
         cursor.execute(update_query_end_date)
       connection.commit()
+    print('Done.')
 
 
 
@@ -480,30 +495,33 @@ class TPCDI_Loader():
     """
     Load NEW rows in S_Account into DimAccount table in the target database.
     """
+    print('Loading new accounts...')
     # First, we insert all NEW rows from S_Account into DimAccount
     load_query = """
     """
+    print('Done.')
   
   def load_staging_broker(self):
     """
     Load rows in HR.csv into S_Broker table in staging database.
     """
-
+    print('Loading staging broker...')
     # Create query to load txt data into S_Watches table
     cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/Broker.ctl', self.batch_dir + 'HR.csv')
     os.system(cmd)
+    print('Done.')
 
   def load_broker(self):
     """
     Create DimBroker table in the target database and then load rows in HR.csv into it.
     """
+    print('Loading broker...')
     load_dim_broker_query = """
       INSERT INTO DimBroker (BrokerID,ManagerID,FirstName,LastName,MiddleInitial,Branch,Office,Phone,IsCurrent,BatchID,EffectiveDate,EndDate)
       SELECT SB.EmployeeID, SB.ManagerID, SB.EmployeeFirstName, SB.EmployeeLastName, SB.EmployeeMI, SB.EmployeeBranch, SB.EmployeeOffice, SB.EmployeePhone, 'true', %d, (SELECT MIN(DateValue) FROM DimDate), TO_DATE('9999/12/31', 'yyyy/mm/dd')
       FROM S_Broker SB
       WHERE SB.EmployeeJobCode = 314
     """ % (self.batch_number)
-    print(load_dim_broker_query)
 
     with oracledb.connect(
       user=self.oracle_user, password=self.oracle_pwd, 
@@ -511,36 +529,41 @@ class TPCDI_Loader():
       with connection.cursor() as cursor:
         cursor.execute(load_dim_broker_query)
       connection.commit()
+    print('Done.')
 
 
   def load_staging_cash_balances(self):
     """
     Load rows in CashTransaction.txt into S_Cash_Balances table in staging database.
     """
-
+    print('Loading staging cash balances...')
     # Create query to load txt data into S_Watches table
     cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/CashBalances.ctl', self.batch_dir + 'CashTransaction.txt')
     os.system(cmd)
+    print('Done.')
 
   def load_staging_watches(self):
     """
     Load rows in WatchHistory.txt into S_Watches table in staging database.
     """
-
+    print('Loading staging watches...')
     # Create query to load txt data into S_Watches table
     cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/Watches.ctl', self.batch_dir + 'WatchHistory.txt')
     os.system(cmd)
+    print('Done.')
 
   def load_staging_prospect(self):
     """
     Load rows in Prospect.csv into S_Prospect table in staging database.
     """
-
+    print('Loading staging prospect...')
     # Create query to load csv data into S_Prospect table
     cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/Prospect.ctl', self.batch_dir + 'Prospect.csv')
     os.system(cmd)
+    print('Done.')
 
   def load_prospect(self):
+    print('Loading prospect...')
     marketing_nameplate_func = """
     CREATE OR REPLACE FUNCTION get_marketing_template(net_worth NUMBER, income NUMBER,
     number_credit_cards NUMBER, number_children NUMBER, age NUMBER,
@@ -579,8 +602,7 @@ class TPCDI_Loader():
           SP.CREDIT_RATING, SP.OWN_OR_RENT_FLAG, SP.EMPLOYER,SP.NUMBER_CREDIT_CARDS, SP.NET_WORTH, 
           get_marketing_template(SP.NET_WORTH, SP.INCOME, SP.NUMBER_CREDIT_CARDS, SP.NUMBER_CHILDREM, SP.AGE, SP.CREDIT_RATING, SP.NUMBER_CARS) MarketingNameplate
     FROM S_Prospect SP
-    """.format(self.batch_number)    
-    print(load_prospect_query)
+    """.format(self.batch_number)   
 
     with oracledb.connect(
       user=self.oracle_user, password=self.oracle_pwd, 
@@ -589,19 +611,23 @@ class TPCDI_Loader():
         cursor.execute(marketing_nameplate_func)
         cursor.execute(load_prospect_query)
       connection.commit()
+    print('Done.')
   
   def load_audit(self):
     """
     Create Audit table in the staging database and then load rows in files with "_audit.csv" ending into it.
     """
+    print('Loading staging audit...')
     for filepath in glob.iglob(self.batch_dir+"*_audit.csv"):# Create query to load text data into tradeType table
       cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/Audit.ctl', filepath)
       os.system(cmd)
+    print('Done.')
 
   def load_staging_finwire(self):
     """
     Create S_Company and S_Security table in the staging database and then load rows in FINWIRE files with the type of CMP
     """
+    print('Loading staging company, security and financial...')
     base_path = "../staging/"+self.sf+"/Batch1/"
     s_company_base_query = "INSERT INTO S_Company"
     s_security_base_query = "INSERT INTO S_Security"
@@ -833,11 +859,13 @@ class TPCDI_Loader():
               cursor.execute(query)
           connection.commit()
         s_financial_values = []
+    print('Done.')
           
   def load_target_dim_company(self):
     """
     Create Dim Company table in the staging database and then load rows by joining staging_company, staging_industry, and staging StatusType
     """
+    print('Loading DimCompany table...')
 
     load_dim_company_query = """
     INSERT INTO DimCompany (CompanyID, Status,Name,Industry,SPrating,isLowGrade,CEO,AddressLine1,AddressLine2,PostalCode,City,StateProv,Country,Description,FoundingDate,IsCurrent,BatchID,EffectiveDate,EndDate)
@@ -925,11 +953,13 @@ class TPCDI_Loader():
         cursor.execute(update_sdc_dimcompany_query)
         cursor.execute(drop_sdc_dimcompany_query)
       connection.commit()
+    print('Done.')
   
   def load_target_dim_security(self):
     """
     Create Security table in the staging database and then load rows by joining staging_security, status_type and dim_company
     """
+    print('Loading DimSecurity...')
     load_dim_security_query_1 = """
     INSERT INTO DimSecurity (Symbol,Issue,Status,Name,ExchangeID,SK_CompanyID,SharesOutstanding,FirstTrade,FirstTradeOnExchange,Dividend,IsCurrent,BatchID,EffectiveDate,EndDate)
     SELECT SS.SYMBOL,SS.ISSUE_TYPE, ST.ST_NAME, SS.NAME, SS.EX_ID, DC.SK_CompanyID, SS.SH_OUT, TO_DATE(SS.FIRST_TRADE_DATE,'YYYY-MM-DD'),
@@ -1017,6 +1047,7 @@ class TPCDI_Loader():
         cursor.execute(update_sdc_dimsecurity_query)
         cursor.execute(drop_sdc_dimsecurity_query)
       connection.commit()
+    print('Done.')
 
   def load_target_financial(self):
     """
