@@ -52,8 +52,8 @@ if __name__ == "__main__":
             loader.load_staging_finwire()
             loader.load_staging_prospect()
             loader.load_staging_broker()
-            # loader.load_staging_cash_balances()
-            # loader.load_staging_watches()
+            loader.load_staging_cash_balances()
+            loader.load_staging_watches()
             loader.load_staging_trade()
             loader.load_staging_trade_history()
         
@@ -74,5 +74,6 @@ if __name__ == "__main__":
             loader.load_inact_account()
             loader.update_prospect()
             loader.load_trade()
+            loader.load_cash_balances()
     end = time.time()
     print(end-start)

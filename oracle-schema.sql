@@ -173,7 +173,6 @@ CREATE TABLE DImessages ( MessageDateAndTime TIMESTAMP Not NULL,
 CREATE TABLE FactCashBalances ( SK_CustomerID NUMBER(11,0) Not Null REFERENCES DimCustomer (SK_CustomerID),
 								SK_AccountID NUMBER(11,0) Not Null REFERENCES DimAccount (SK_AccountID),
 								SK_DateID NUMBER(11,0) Not Null REFERENCES DimDate (SK_DateID),
-								SK_TimeID NUMBER(11,0) Not Null REFERENCES DimTime (SK_TimeID),
 								Cash NUMBER(15,2) Not Null,
 								BatchID NUMBER(5)
 );
