@@ -1517,4 +1517,9 @@ class TPCDI_Loader():
         cursor.execute(query2)
       connection.commit()
     print('Done.')
-      
+
+  def validate_results(self):
+    print("Putting validation queries results to DImessages")
+    cmd = TPCDI_Loader.BASE_SQL_CMD+' @%s' % (self.load_path+'/tpcdi_validation.sql')
+    os.system(cmd)
+    print("Done.")
