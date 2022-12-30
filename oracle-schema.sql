@@ -461,7 +461,17 @@ CREATE TABLE S_Trade_History (
     th_t_id NUMBER(15),
     th_dts DATE,
     th_st_id CHAR(4)
-);    
+); 
+
+CREATE TABLE S_Holdings(
+    CDC_FLAG CHAR(1),
+    CDC_DSN NUMBER(12),
+    HH_H_T_ID NUMBER(15) NOT NULL,
+    HH_T_ID NUMBER(15) NOT NULL,
+    HH_BEFORE_QTY NUMBER(6) NOT NULL,
+    HH_AFTER_QTY NUMBER(6) NOT NULL
+);
+   
 -- CREATE INDEX PIndex ON dimtrade (tradeid);
 -- CREATE TABLE dimtradeforexperiment
 -- (

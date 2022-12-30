@@ -56,6 +56,7 @@ if __name__ == "__main__":
             loader.load_staging_watches()
             loader.load_staging_trade()
             loader.load_staging_trade_history()
+            loader.load_staging_holdings()
         
             # # Step 4: Load dependant table
             loader.load_target_dim_company()
@@ -76,5 +77,6 @@ if __name__ == "__main__":
             loader.load_trade()
             loader.load_cash_balances()
             loader.load_watches()
+            loader.load_fact_holdings()
     end = time.time()
     print(end-start)
