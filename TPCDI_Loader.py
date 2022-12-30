@@ -643,6 +643,44 @@ class TPCDI_Loader():
         cursor.execute(update_query_end_date)
       connection.commit()
     print('Done.')
+
+    print('Adding invalid Customer records to DImessages...')
+    query = """INSERT INTO DImessages 
+        (MessageDateAndTime, BatchID, MessageSource, MessageText, MessageType, MessageData)
+        SELECT CURRENT_TIMESTAMP, C.BatchID, 'DimCustomer', 'Invalid customer tier', 'Alert', 'C_ID = ' || C.CustomerID || ', C_TIER = ' || C.Tier
+        FROM DimCustomer C
+        WHERE C.Tier not in (1, 2, 3)"""
+    with oracledb.connect(
+      user=self.oracle_user, password=self.oracle_pwd, 
+      dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+          with connection.cursor() as cursor:
+              cursor.execute(query)
+              connection.commit()
+    
+    query = "select BatchDate, BatchDate-NUMTOYMINTERVAL(100, 'year') from BatchDate where BatchNumber = 1"
+
+    with oracledb.connect(
+    user=self.oracle_user, password=self.oracle_pwd, 
+    dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(query)
+            for i in cursor:
+                b_date, b_date_100 = i
+                break
+
+    b_date_100 = b_date_100.strftime('%Y-%m-%d')
+    b_date = b_date.strftime('%Y-%m-%d')
+
+    query = """insert into DImessages (MessageDateAndTime, BatchID, MessageSource, MessageText, MessageType, MessageData)
+              SELECT CURRENT_TIMESTAMP, C.BatchID, 'DimCustomer', 'DOB is out of range', 'Alert', 'C_ID = ' || C.CustomerID || ', C_DOB = ' || C.DOB
+              FROM DimCustomer C
+              where ( (TO_DATE(\'%s\', 'yyyy-mm-dd') > DOB) or (DOB > (TO_DATE(\'%s\', 'yyyy-mm-dd'))) )"""%(b_date_100, b_date)
+    with oracledb.connect(
+    user=self.oracle_user, password=self.oracle_pwd, 
+    dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(query)
+            connection.commit()
   
   def load_inact_account(self):
     # Finally, we update the EndDate field, the Status and the isCurrent field for all rows in the DimAccount table
@@ -741,23 +779,6 @@ class TPCDI_Loader():
     # Create query to load txt data into S_Watches table
     cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/CashBalances.ctl', self.batch_dir + 'CashTransaction.txt')
     os.system(cmd)
-    print('Done.')
-  
-  def load_cash_balances(self):
-    print('Loading FactCashBalances...')
-    insert_query = """
-    INSERT INTO FactCashBalances (SK_CustomerID, SK_AccountID, SK_DateID, Cash, BatchID)
-    SELECT SK_CustomerID, SK_AccountID, SK_DateID, SUM(CT_AMT) OVER (PARTITION BY SK_AccountID ORDER BY DateValue) Cash, {0} BatchID
-        FROM S_Cash_Balances CB INNER JOIN DimAccount DA ON (CB.CT_CA_ID = DA.AccountID)
-                                INNER JOIN DimDate DD ON (TO_CHAR(CB.CT_DTS, 'YYYY-MM-DD') = TO_CHAR(DateValue, 'YYYY-MM-DD'))
-        WHERE DA.EffectiveDate <= CB.CT_DTS AND CB.CT_DTS <= DA.EndDate
-    """.format(self.batch_number)
-    with oracledb.connect(
-            user=self.oracle_user, password=self.oracle_pwd,
-            dsn=self.oracle_host + '/' + self.oracle_db) as connection:
-      with connection.cursor() as cursor:
-        cursor.execute(insert_query)
-      connection.commit()
     print('Done.')
 
   def load_staging_watches(self):
@@ -1379,7 +1400,7 @@ class TPCDI_Loader():
             T_BID_PRICE BidPrice, T_EXEC_NAME ExecutedBy, 
             T_TRADE_PRICE TradePrice, T_CHRG Fee, T_COMM Commission, T_TAX Tax,
             ST_NAME Status, TT_NAME Type, SK_SecurityID, SK_CompanyID,
-            SK_AccountID, SK_CustomerID, SK_BrokerID, {0} BatchID
+            SK_AccountID, SK_CustomerID, SK_BrokerID, 1 BatchID
     FROM    S_Trade T   INNER JOIN S_Trade_History TH ON (T.T_ID = TH.TH_T_ID)
                         INNER JOIN StatusType ST ON (T.T_ST_ID = ST.ST_ID)
                         INNER JOIN TradeType TT ON (T.T_TT_ID = TT.TT_ID)
@@ -1389,7 +1410,7 @@ class TPCDI_Loader():
                         INNER JOIN DimTime DT ON (TO_CHAR(TH_DTS, 'HH24:MI:SS') = TO_CHAR(TimeValue, 'HH24:MI:SS'))
     WHERE   DS.EffectiveDate <= TH_DTS AND TH_DTS <= DS.EndDate
             AND DA.EffectiveDate <= TH_DTS AND TH_DTS <= DA.EndDate
-    """.format(self.batch_number)
+    """
     with oracledb.connect(
             user=self.oracle_user, password=self.oracle_pwd,
             dsn=self.oracle_host + '/' + self.oracle_db) as connection:
