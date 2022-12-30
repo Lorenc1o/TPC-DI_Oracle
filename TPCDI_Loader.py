@@ -643,6 +643,45 @@ class TPCDI_Loader():
         cursor.execute(update_query_end_date)
       connection.commit()
     print('Done.')
+
+    print('Adding invalid Customer records to DImessages...')
+    query = """INSERT INTO DImessages 
+        (MessageDateAndTime, BatchID, MessageSource, MessageText, MessageType, MessageData)
+        SELECT CURRENT_TIMESTAMP, C.BatchID, 'DimCustomer', 'Invalid customer tier', 'Alert', 'C_ID = ' || C.CustomerID || ', C_TIER = ' || C.Tier
+        FROM DimCustomer C
+        WHERE C.Tier not in (1, 2, 3)"""
+    with oracledb.connect(
+      user=self.oracle_user, password=self.oracle_pwd, 
+      dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+          with connection.cursor() as cursor:
+              cursor.execute(query)
+              connection.commit()
+    
+    query = "select BatchDate, BatchDate-NUMTOYMINTERVAL(100, 'year') from BatchDate where BatchNumber = 1"
+
+    with oracledb.connect(
+    user=self.oracle_user, password=self.oracle_pwd, 
+    dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(query)
+            for i in cursor:
+                b_date, b_date_100 = i
+                break
+
+    b_date_100 = b_date_100.strftime('%Y-%m-%d')
+    b_date = b_date.strftime('%Y-%m-%d')
+
+    query = """insert into DImessages (MessageDateAndTime, BatchID, MessageSource, MessageText, MessageType, MessageData)
+              SELECT CURRENT_TIMESTAMP, C.BatchID, 'DimCustomer', 'DOB is out of range', 'Alert', 'C_ID = ' || C.CustomerID || ', C_DOB = ' || C.DOB
+              FROM DimCustomer C
+              where ( (TO_DATE(\'%s\', 'yyyy-mm-dd') > DOB) or (DOB > (TO_DATE(\'%s\', 'yyyy-mm-dd'))) )"""%(b_date_100, b_date)
+    with oracledb.connect(
+    user=self.oracle_user, password=self.oracle_pwd, 
+    dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(query)
+            connection.commit()
+    print("Done.")
   
   def load_inact_account(self):
     # Finally, we update the EndDate field, the Status and the isCurrent field for all rows in the DimAccount table
