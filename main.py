@@ -1,6 +1,5 @@
 import argparse
 import configparser
-from utils import sort_merge_join, CSV_Transformer
 import time
 
 from TPCDI_Loader import TPCDI_Loader
