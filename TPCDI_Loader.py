@@ -1436,4 +1436,28 @@ class TPCDI_Loader():
         cursor.execute(insert_dimtrade_query)
       connection.commit()
     print('Done.')
+
+    print('Filling DImessages with invalid DimTrade')
+    query1 = """
+    INSERT INTO DImessages 
+    (MessageDateAndTime, BatchID, MessageSource, MessageText, MessageType, MessageData)
+    SELECT CURRENT_TIMESTAMP, T.BatchID, 'DimTrade', 'Invalid trade commission', 'Alert', 'T_ID = ' || T.TradeID || ', T_COMM = ' || T.Commission
+    FROM DimTrade T
+    where T.Commission IS NOT NULL and T.Commission > T.TradePrice*T.Quantity
+    """
+    query2 = """
+    INSERT INTO DImessages 
+    (MessageDateAndTime, BatchID, MessageSource, MessageText, MessageType, MessageData)
+    SELECT CURRENT_TIMESTAMP, T.BatchID, 'DimTrade', 'Invalid trade fee', 'Alert', 'T_ID = ' || T.TradeID || ', T_CHRG = ' || T.Fee
+    FROM DimTrade T
+    where T.Fee IS NOT NULL and T.Fee > T.TradePrice*T.Quantity
+    """
+    with oracledb.connect(
+            user=self.oracle_user, password=self.oracle_pwd,
+            dsn=self.oracle_host + '/' + self.oracle_db) as connection:
+      with connection.cursor() as cursor:
+        cursor.execute(query1)
+        cursor.execute(query2)
+      connection.commit()
+    print('Done.')
       
