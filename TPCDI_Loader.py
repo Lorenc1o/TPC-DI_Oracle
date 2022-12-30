@@ -2,6 +2,7 @@ import os
 import glob
 import xmltodict
 import oracledb
+import pickle
 
 from utils import char_insert
 
@@ -1551,3 +1552,20 @@ class TPCDI_Loader():
     cmd = TPCDI_Loader.BASE_SQL_CMD+' @%s' % (self.load_path+'/tpcdi_validation.sql')
     os.system(cmd)
     print("Done.")
+
+    # Saving the output to a file
+    query = "select * from DImessages"
+    with oracledb.connect(
+            user=self.oracle_user, password=self.oracle_pwd,
+            dsn=self.oracle_host + '/' + self.oracle_db) as connection:
+      with connection.cursor() as cursor:
+        cursor.execute(query)
+        DIMessages = []
+        for i in cursor:
+          DIMessages.append(i)
+        filehandler = open(f"results_scale_{self.sf}_batch{self.batch_number}.p","wb")
+        pickle.dump(DIMessages,filehandler)
+        filehandler.close()
+        # with open(, "w") as f:
+        #   for i in cursor:
+        #     f.write(";".join(i)+'\n')
