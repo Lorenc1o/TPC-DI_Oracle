@@ -27,10 +27,12 @@ if __name__ == "__main__":
     # But le'ts first work on the first batch
     batch_numbers = [1]
     
-    start = time.time()
     for batch_number in batch_numbers:
         # For the historical load, all data are loaded
         if batch_number == 1:
+
+            historic_start = time.time()
+
             loader = TPCDI_Loader(
                 args.scalefactor, config, batch_number, args.drop_sql, 
                 args.create_sql, args.load_path, overwrite=True)
@@ -77,6 +79,8 @@ if __name__ == "__main__":
             loader.load_cash_balances()
             loader.load_watches()
             loader.load_fact_holdings()
+
+            historic_end = time.time()
+            print(historic_end-historic_start)
+
             loader.validate_results()
-    end = time.time()
-    print(end-start)
