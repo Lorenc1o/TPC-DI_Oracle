@@ -741,6 +741,19 @@ class TPCDI_Loader():
       connection.commit()
     print('Done.')
 
+    print('Filling DImessages for Prospect')
+    query = """INSERT INTO DImessages
+        (MessageDateAndTime, BatchID, MessageSource, MessageText, MessageType, MessageData)
+	    SELECT CURRENT_TIMESTAMP,%s,'Prospect', 'Inserted rows', 'Status', COUNT(*) FROM Prospect
+    """%(str(self.batch_number))
+    with oracledb.connect(
+    user=self.oracle_user, password=self.oracle_pwd, 
+    dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(query)
+            connection.commit()
+    print('Done.')
+
   def load_staging_broker(self):
     """
     Load rows in HR.csv into S_Broker table in staging database.
@@ -847,6 +860,21 @@ class TPCDI_Loader():
     cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/Prospect.ctl', self.batch_dir + 'Prospect.csv')
     os.system(cmd)
     print('Done.')
+
+    rowcount = 0
+    for _ in open(self.batch_dir + 'Prospect.csv'):
+      rowcount+= 1
+    print(rowcount)
+    query = """INSERT INTO DImessages
+        (MessageDateAndTime, BatchID, MessageSource, MessageText, MessageType, MessageData)
+	    VALUES (CURRENT_TIMESTAMP,%s,'Prospect', 'Source rows', 'Status',\'%s\')
+    """%(str(self.batch_number), str(rowcount))
+    with oracledb.connect(
+    user=self.oracle_user, password=self.oracle_pwd, 
+    dsn=self.oracle_host+'/'+self.oracle_db) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(query)
+            connection.commit()
 
   def load_prospect(self):
     print('Loading prospect...')
