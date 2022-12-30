@@ -59,7 +59,7 @@ if __name__ == "__main__":
         
             # # Step 4: Load dependant table
             loader.load_target_dim_company()
-            # loader.load_target_financial()
+            loader.load_target_financial()
             loader.load_target_dim_security()
             loader.load_broker()
             loader.load_prospect()
@@ -75,5 +75,6 @@ if __name__ == "__main__":
             loader.update_prospect()
             loader.load_trade()
             loader.load_cash_balances()
+            loader.load_watches()
     end = time.time()
     print(end-start)
