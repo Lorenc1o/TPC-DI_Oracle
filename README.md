@@ -12,3 +12,13 @@ Group members:
 Professor: Zimányi, Esteban
 
 ## Structure of the repo
+
+## Base steps
+1. Download TPC-DI Tools (https://www.tpc.org/tpc_documents_current_versions/current_specifications5.asp)
+2. Install java-8 if not already installed
+3. Install python-oracledb library: (More information: https://python-oracledb.readthedocs.io/en/latest/user_guide/installation.html)
+4. Rename folder PDGF to pdgf
+5. Generate the data to a folder "staging/<sf>" where <sf> is the chosen scale factor
+  - e.g. for scale factor 3: java -jar DIGen.jar -sf 3 -o ../staging/3
+6. If implementing on Oracle Linux, convert the generated files to Linux format: find Batch1/ -type f -exec dos2unix {} \; > results.out
+7. 
