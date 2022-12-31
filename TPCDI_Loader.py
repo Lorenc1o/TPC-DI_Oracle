@@ -1546,6 +1546,13 @@ class TPCDI_Loader():
         cursor.execute(query2)
       connection.commit()
     print('Done.')
+
+  def load_staging_market_history(self):
+    print('Loading staging market history...')
+    # Create query to load txt data into S_Daily_Market table
+    cmd = TPCDI_Loader.BASE_SQLLDR_CMD+' control=%s data=%s' % (self.load_path+'/DailyMarket.ctl', self.batch_dir + 'DailyMarket.txt')
+    os.system(cmd)
+    print('Done.')
   
   def load_market_history(self):
     print('Loading DimMarketHistory...')
