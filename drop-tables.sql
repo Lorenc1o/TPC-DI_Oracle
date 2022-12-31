@@ -31,4 +31,5 @@ drop table S_Account cascade constraints PURGE;
 drop table S_Trade cascade constraints PURGE;
 drop table S_Trade_History cascade constraints PURGE;
 drop table S_Holdings cascade constraints PURGE;
+drop table S_Daily_Market cascade constraints PURGE;
 exit

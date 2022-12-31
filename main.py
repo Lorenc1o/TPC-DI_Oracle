@@ -58,6 +58,7 @@ if __name__ == "__main__":
             loader.load_staging_trade()
             loader.load_staging_trade_history()
             loader.load_staging_holdings()
+            # loader.load_staging_market_history()
         
             # Step 4: Load dependant table
             loader.load_target_dim_company()
@@ -79,7 +80,7 @@ if __name__ == "__main__":
             loader.load_cash_balances()
             loader.load_watches()
             loader.load_fact_holdings()
-            #loader.load_market_history()
+            # loader.load_market_history()
 
             historic_end = time.time()
             print(historic_end-historic_start)

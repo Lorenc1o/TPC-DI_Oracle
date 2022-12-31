@@ -194,11 +194,11 @@ CREATE TABLE FactMarketHistory (    SK_SecurityID NUMBER(11,0) Not Null REFERENC
 									SK_CompanyID NUMBER(11,0) Not Null REFERENCES DimCompany (SK_CompanyID),
 									SK_DateID NUMBER(11,0) Not Null REFERENCES DimDate (SK_DateID),
 									PERatio NUMBER(10,2),
-									Yield NUMBER(5,2) Not Null,
+									Yield NUMBER(5,2),
 									FiftyTwoWeekHigh NUMBER(8,2) Not Null,
-									SK_FiftyTwoWeek NUMBER(11,0) Not Null,
+									SK_FiftyTwoWeekHighDate NUMBER(11,0) Not Null,
 									FiftyTwoWeekLow NUMBER(8,2) Not Null,
-									SK_FiftyTwoWeekL NUMBER(11,0) Not Null,
+									SK_FiftyTwoWeekLowDate NUMBER(11,0) Not Null,
 									ClosePrice NUMBER(8,2) Not Null,
 									DayHigh NUMBER(8,2) Not Null,
 									DayLow NUMBER(8,2) Not Null,
@@ -472,6 +472,15 @@ CREATE TABLE S_Holdings(
     HH_AFTER_QTY NUMBER(6) NOT NULL
 );
    
+CREATE TABLE S_Daily_Market (   CDC_FLAG CHAR(1),
+                                CDC_DSN NUMBER(12),
+                                DM_DATE DATE,
+                                DM_S_SYMB CHAR(15),
+                                DM_CLOSE NUMBER(8, 2),
+                                DM_HIGH NUMBER(8, 2),
+                                DM_LOW NUMBER(8, 2),
+                                DM_VOL NUMBER(12)
+);
 -- CREATE INDEX PIndex ON dimtrade (tradeid);
 -- CREATE TABLE dimtradeforexperiment
 -- (
